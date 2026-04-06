@@ -272,6 +272,14 @@ export default function DiagnosticoPage() {
           </div>
         )}
 
+        {/* Mi Tracker */}
+        <button
+          onClick={() => router.push('/tracker')}
+          className="w-full bg-white border-2 border-[#16A34A] text-[#16A34A] font-bold py-4 rounded-2xl transition-colors hover:bg-[#F0FDF4] text-sm flex items-center justify-center gap-2"
+        >
+          <span>📊</span> Mi Tracker diario
+        </button>
+
         {/* CTA */}
         <div className="bg-[#0F172A] rounded-2xl p-6 text-center">
           <div className="text-2xl font-bold text-white mb-1" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em' }}>
