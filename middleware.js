@@ -6,5 +6,7 @@ export async function middleware(request) {
 }
 
 export const config = {
+  // /auth/callback está excluido intencionalmente para que Supabase pueda
+  // completar el intercambio de código sin requerir sesión previa.
   matcher: ['/pro/:path*', '/dashboard/:path*', '/onboarding/:path*'],
 }

@@ -10,9 +10,20 @@ export async function GET(request) {
     const supabase = createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`)
+      // En Vercel, `origin` puede ser una URL interna. Usar x-forwarded-host
+      // para construir la URL pública correcta y evitar el redirect loop.
+      const forwardedHost = request.headers.get('x-forwarded-host')
+      const isLocalEnv = process.env.NODE_ENV === 'development'
+
+      if (isLocalEnv || !forwardedHost) {
+        return NextResponse.redirect(`${origin}${next}`)
+      }
+      return NextResponse.redirect(`https://${forwardedHost}${next}`)
     }
   }
 
-  return NextResponse.redirect(`${origin}/auth?error=callback`)
+  const forwardedHost = request.headers.get('x-forwarded-host')
+  const isLocalEnv = process.env.NODE_ENV === 'development'
+  const base = isLocalEnv || !forwardedHost ? origin : `https://${forwardedHost}`
+  return NextResponse.redirect(`${base}/auth?error=callback`)
 }
