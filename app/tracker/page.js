@@ -100,7 +100,7 @@ function mealMacros(items) {
   )
 }
 
-// ─── FoodSearch ───────────────────────────────────────────────────────────────
+// ─── FoodSearch (modo búsqueda) ───────────────────────────────────────────────
 function FoodSearch({ onAdd }) {
   const [query, setQuery]       = useState('')
   const [selected, setSelected] = useState(null)
@@ -126,7 +126,7 @@ function FoodSearch({ onAdd }) {
   }
 
   return (
-    <div className="mt-3 space-y-2">
+    <div className="space-y-2">
       {!selected ? (
         <div className="relative">
           <input
@@ -181,6 +181,160 @@ function FoodSearch({ onAdd }) {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ─── AIDescribe (modo IA) ─────────────────────────────────────────────────────
+function AIDescribe({ onAddAll }) {
+  const [text, setText]       = useState('')
+  const [loading, setLoading] = useState(false)
+  const [preview, setPreview] = useState(null)  // items[] | null
+  const [error, setError]     = useState('')
+
+  const analyze = async () => {
+    if (!text.trim()) return
+    setLoading(true); setError(''); setPreview(null)
+    try {
+      const res = await fetch('/api/nutrition/parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: text }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error')
+      setPreview(data.items || [])
+    } catch (e) {
+      setError('No se pudo analizar. Inténtalo de nuevo.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const confirmAll = () => {
+    preview.forEach((item, i) =>
+      onAddAll({ id: Date.now() + i, ...item })
+    )
+    setText(''); setPreview(null)
+  }
+
+  if (preview) {
+    const total = preview.reduce((a, it) => ({
+      cal: a.cal + it.calories, p: a.p + it.protein,
+      c: a.c + it.carbs, f: a.f + it.fat,
+    }), { cal: 0, p: 0, c: 0, f: 0 })
+
+    return (
+      <div className="space-y-3">
+        {/* Items detectados */}
+        <div className="space-y-1.5">
+          {preview.map((item, i) => (
+            <div key={i} className="flex items-center justify-between bg-[#F8FAFC] rounded-xl px-3 py-2.5">
+              <div className="flex-1 min-w-0 mr-2">
+                <div className="text-sm font-medium text-[#0F172A] truncate">{item.name}</div>
+                <div className="text-xs text-[#94A3B8]">{item.grams}g estimados</div>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <div className="text-sm font-bold text-[#0F172A]">{Math.round(item.calories)} kcal</div>
+                <div className="text-xs text-[#94A3B8]">P{r1(item.protein)} C{r1(item.carbs)} G{r1(item.fat)}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Total */}
+        <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl px-4 py-2.5 flex items-center justify-between">
+          <span className="text-sm font-semibold text-[#15803D]">Total comida</span>
+          <div className="text-right">
+            <span className="text-base font-bold text-[#16A34A]">{Math.round(total.cal)} kcal</span>
+            <span className="text-xs text-[#64748B] ml-2">P{Math.round(total.p)} C{Math.round(total.c)} G{Math.round(total.f)}</span>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => setPreview(null)}
+            className="flex-1 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#64748B] hover:bg-[#F8FAFC] transition-colors"
+          >
+            Editar
+          </button>
+          <button
+            onClick={confirmAll}
+            className="flex-1 py-2.5 rounded-xl bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-bold transition-colors"
+          >
+            Añadir al registro ✓
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      <textarea
+        value={text}
+        onChange={e => setText(e.target.value)}
+        placeholder={'Describe lo que has comido...\nEj: 2 tostadas de pan integral con AOVE y 30g de pavo, un café con leche'}
+        rows={3}
+        className="w-full bg-[#F8FAFC] border border-[#E2E8F0] focus:border-[#16A34A] rounded-xl px-4 py-3 text-sm text-[#0F172A] resize-none focus:outline-none transition-colors leading-relaxed"
+      />
+      {error && <p className="text-xs text-red-500">{error}</p>}
+      <button
+        onClick={analyze}
+        disabled={!text.trim() || loading}
+        className={`w-full py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+          text.trim() && !loading
+            ? 'bg-[#0F172A] hover:bg-[#1E293B] text-white'
+            : 'bg-[#E2E8F0] text-[#94A3B8] cursor-not-allowed'
+        }`}
+      >
+        {loading ? (
+          <>
+            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            Calculando macros...
+          </>
+        ) : (
+          <>✨ Calcular macros con IA</>
+        )}
+      </button>
+    </div>
+  )
+}
+
+// ─── MealInput (tabs: buscar / IA) ────────────────────────────────────────────
+function MealInput({ onAdd }) {
+  const [mode, setMode] = useState('ai')  // 'search' | 'ai'
+
+  return (
+    <div className="mt-3">
+      {/* Tabs */}
+      <div className="flex bg-[#F1F5F9] rounded-xl p-1 mb-3">
+        <button
+          onClick={() => setMode('ai')}
+          className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            mode === 'ai'
+              ? 'bg-white text-[#0F172A] shadow-sm'
+              : 'text-[#64748B] hover:text-[#0F172A]'
+          }`}
+        >
+          ✨ Describir con IA
+        </button>
+        <button
+          onClick={() => setMode('search')}
+          className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            mode === 'search'
+              ? 'bg-white text-[#0F172A] shadow-sm'
+              : 'text-[#64748B] hover:text-[#0F172A]'
+          }`}
+        >
+          🔍 Buscar alimento
+        </button>
+      </div>
+
+      {mode === 'ai'
+        ? <AIDescribe onAddAll={onAdd} />
+        : <FoodSearch onAdd={onAdd} />
+      }
     </div>
   )
 }
@@ -249,7 +403,7 @@ function MealAccordion({ mealKey, label, emoji, items, onAdd, onRemove }) {
               </div>
             </div>
           )}
-          <FoodSearch onAdd={onAdd} />
+          <MealInput onAdd={onAdd} />
         </div>
       )}
     </div>
