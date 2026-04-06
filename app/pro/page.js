@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { DAYS_ES, GOALS_ES, estimateCaloriesBurned } from '@/lib/utils'
@@ -769,7 +769,7 @@ function LabTab({ plan, userData }) {
 }
 
 // ─── Página principal Pro ─────────────────────────────────────────────────────
-export default function ProPage() {
+function ProContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
@@ -868,5 +868,13 @@ export default function ProPage() {
         {activeTab === 'lab' && <LabTab plan={plan} userData={userData} />}
       </div>
     </div>
+  )
+}
+
+export default function ProPage() {
+  return (
+    <Suspense>
+      <ProContent />
+    </Suspense>
   )
 }
