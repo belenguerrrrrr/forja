@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 // ─── Alimentos (kcal / p / c / f por 100g) ───────────────────────────────────
@@ -462,6 +462,19 @@ function MealCard({ mealKey, label, emoji, items, onAdd, onRemove, mealTarget })
   )
 }
 
+// ─── Helpers de fecha ─────────────────────────────────────────────────────────
+function offsetDate(base, days) {
+  const d = new Date(base + 'T12:00:00')
+  d.setDate(d.getDate() + days)
+  return d.toISOString().split('T')[0]
+}
+
+function formatDate(dateStr) {
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('es-ES', {
+    weekday: 'short', day: 'numeric', month: 'short',
+  })
+}
+
 // ─── TrackerPage ──────────────────────────────────────────────────────────────
 export default function TrackerPage() {
   const router = useRouter()
@@ -471,21 +484,40 @@ export default function TrackerPage() {
   const [mounted, setMounted]           = useState(false)
   const [showWorkout, setShowWorkout]   = useState(false)
   const [checkinSaved, setCheckinSaved] = useState(false)
+  const [viewDate, setViewDate]         = useState('')
+  // Ref para que el auto-save siempre use la fecha activa sin crear race conditions
+  const viewDateRef = useRef('')
 
   useEffect(() => {
-    setMounted(true)
-    try { const s = localStorage.getItem(todayKey()); if (s) setData(JSON.parse(s)) } catch {}
+    const today = new Date().toISOString().split('T')[0]
+    viewDateRef.current = today
+    setViewDate(today)
+    try { const s = localStorage.getItem(`forja_tracker_${today}`); if (s) setData(JSON.parse(s)) } catch {}
     try { const p = localStorage.getItem('forja_plan_preview'); if (p) setPlan(JSON.parse(p)) } catch {}
     try {
       const od = JSON.parse(localStorage.getItem('forja_onboarding_data') || '{}')
       if (od.current_weight) setUserWeight(Number(od.current_weight))
     } catch {}
+    setMounted(true)
   }, [])
 
+  // Auto-save: usa ref para evitar guardar en la fecha equivocada durante navegación
   useEffect(() => {
-    if (!mounted) return
-    localStorage.setItem(todayKey(), JSON.stringify(data))
+    if (!mounted || !viewDateRef.current) return
+    localStorage.setItem(`forja_tracker_${viewDateRef.current}`, JSON.stringify(data))
   }, [data, mounted])
+
+  // Navegar a otra fecha
+  const goToDate = (date) => {
+    const today = new Date().toISOString().split('T')[0]
+    if (date > today) return  // no navegar al futuro
+    viewDateRef.current = date
+    setViewDate(date)
+    try {
+      const s = localStorage.getItem(`forja_tracker_${date}`)
+      setData(s ? JSON.parse(s) : EMPTY_DATA())
+    } catch { setData(EMPTY_DATA()) }
+  }
 
   const addFood      = (k, item) => setData(d => ({ ...d, meals: { ...d.meals, [k]: [...d.meals[k], item] } }))
   const removeFood   = (k, id)   => setData(d => ({ ...d, meals: { ...d.meals, [k]: d.meals[k].filter(i => i.id !== id) } }))
@@ -505,38 +537,73 @@ export default function TrackerPage() {
   const net       = consumed - burned
   const pctHeader = targetCal > 0 ? Math.min((consumed / targetCal) * 100, 100) : 0
 
-  const dateStr = mounted
-    ? new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
-    : ''
+  const today   = mounted ? new Date().toISOString().split('T')[0] : ''
+  const isToday = viewDate === today
+  const dateStr = viewDate ? formatDate(viewDate) : ''
 
   if (!mounted) return null
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
 
-      {/* ── Sticky header con línea de progreso ── */}
+      {/* ── Sticky header con navegación de fechas ── */}
       <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#E2E8F0]">
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
-          <button onClick={() => router.push('/diagnostico')} className="text-sm text-[#94A3B8] hover:text-[#0F172A] transition-colors">← Plan</button>
-          <div className="text-center">
-            <div className="text-lg font-bold text-[#16A34A] tracking-widest" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>TRACKER</div>
-            <div className="text-[10px] text-[#94A3B8] capitalize -mt-0.5">{dateStr}</div>
+        <div className="max-w-lg mx-auto px-3 py-2 flex items-center gap-2">
+          {/* Volver al plan */}
+          <button onClick={() => router.push('/diagnostico')} className="text-[#94A3B8] hover:text-[#0F172A] transition-colors text-sm px-1 flex-shrink-0">
+            ←
+          </button>
+
+          {/* Navegación de fechas */}
+          <div className="flex-1 flex items-center justify-center gap-1">
+            <button
+              onClick={() => goToDate(offsetDate(viewDate, -1))}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-[#94A3B8] hover:bg-[#F1F5F9] hover:text-[#0F172A] transition-colors text-sm"
+            >‹</button>
+
+            <button
+              onClick={() => !isToday && goToDate(today)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                isToday
+                  ? 'text-[#16A34A] bg-[#F0FDF4]'
+                  : 'text-[#0F172A] bg-[#F1F5F9] hover:bg-[#E2E8F0]'
+              }`}
+            >
+              <span className="capitalize">{dateStr}</span>
+              {!isToday && <span className="text-[#94A3B8] ml-1 normal-case">· hoy →</span>}
+            </button>
+
+            <button
+              onClick={() => goToDate(offsetDate(viewDate, +1))}
+              disabled={isToday}
+              className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm transition-colors ${
+                isToday ? 'text-[#E2E8F0] cursor-not-allowed' : 'text-[#94A3B8] hover:bg-[#F1F5F9] hover:text-[#0F172A]'
+              }`}
+            >›</button>
           </div>
-          <div className="text-sm font-bold text-[#0F172A]" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>
-            {Math.round(consumed)}<span className="text-xs text-[#94A3B8] font-normal"> kcal</span>
+
+          {/* Kcal del día */}
+          <div className="text-sm font-bold flex-shrink-0" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>
+            {Math.round(consumed)}<span className="text-xs text-[#94A3B8] font-normal">kcal</span>
           </div>
         </div>
-        {/* Línea de progreso bajo el header */}
+
+        {/* Línea de progreso */}
         <div className="h-0.5 bg-[#E2E8F0]">
-          <div
-            className="h-full transition-all duration-700"
-            style={{
-              width: `${pctHeader}%`,
-              backgroundColor: pctHeader > 100 ? '#DC2626' : pctHeader > 88 ? '#F59E0B' : '#16A34A',
-            }}
+          <div className="h-full transition-all duration-700"
+            style={{ width: `${pctHeader}%`, backgroundColor: pctHeader > 100 ? '#DC2626' : pctHeader > 88 ? '#F59E0B' : '#16A34A' }}
           />
         </div>
       </div>
+
+      {/* Banner día pasado */}
+      {!isToday && (
+        <div className="bg-[#FFF7ED] border-b border-[#FED7AA] px-4 py-2 text-center">
+          <span className="text-xs text-[#92400E] font-medium">
+            📅 Viendo historial · {formatDate(viewDate)}
+          </span>
+        </div>
+      )}
 
       <div className="max-w-lg mx-auto px-4 py-6 space-y-5">
 
