@@ -6,35 +6,43 @@ import { createClient } from '@/lib/supabase/client'
 export function useTracker(userId, date = new Date().toISOString().split('T')[0]) {
   const [log, setLog] = useState(null)
   const [foodEntries, setFoodEntries] = useState([])
+  const [workoutEntries, setWorkoutEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
   const fetchLog = async () => {
-    const [{ data: log }, { data: foodEntries }] = await Promise.all([
-      supabase
-        .from('daily_logs')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('log_date', date)
-        .single(),
-      supabase
-        .from('food_entries')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('log_date', date)
-        .order('created_at', { ascending: true }),
+    if (!userId) { setLoading(false); return }
+    setLoading(true)
+    const [{ data: logData }, { data: foods }, { data: workouts }] = await Promise.all([
+      supabase.from('daily_logs').select('*').eq('user_id', userId).eq('log_date', date).single(),
+      supabase.from('food_entries').select('*').eq('user_id', userId).eq('log_date', date).order('created_at', { ascending: true }),
+      supabase.from('workout_entries').select('*').eq('user_id', userId).eq('log_date', date).order('created_at', { ascending: true }),
     ])
-
-    setLog(log)
-    setFoodEntries(foodEntries || [])
+    setLog(logData)
+    setFoodEntries(foods || [])
+    setWorkoutEntries(workouts || [])
     setLoading(false)
   }
 
   useEffect(() => {
-    if (!userId) return
     fetchLog()
   }, [userId, date])
 
+  // ─── Check-in matutino ────────────────────────────────────
+  const morningCheckin = async ({ weight, sleepHours, sleepQuality, energyLevel }) => {
+    const { error } = await supabase.from('daily_logs').upsert({
+      user_id: userId,
+      log_date: date,
+      weight_morning: weight ? parseFloat(weight) : null,
+      sleep_hours: sleepHours ? parseFloat(sleepHours) : null,
+      sleep_quality: sleepQuality || null,
+      energy_level: energyLevel || null,
+    })
+    if (!error) await fetchLog()
+    return { error }
+  }
+
+  // ─── Food entries ─────────────────────────────────────────
   const addFoodEntry = async (entry) => {
     const { data, error } = await supabase
       .from('food_entries')
@@ -42,58 +50,114 @@ export function useTracker(userId, date = new Date().toISOString().split('T')[0]
       .select()
       .single()
 
-    if (!error) {
-      setFoodEntries(prev => [...prev, data])
-      await updateDailyLog()
+    if (!error && data) {
+      const updated = [...foodEntries, data]
+      setFoodEntries(updated)
+      await recalculateFoodTotals(updated)
     }
     return { data, error }
   }
 
-  const updateDailyLog = async () => {
-    // Recalcular totales desde food_entries
-    const { data: entries } = await supabase
+  const removeFoodEntry = async (id) => {
+    const { error } = await supabase
       .from('food_entries')
-      .select('calories, protein, carbs, fat')
+      .delete()
+      .eq('id', id)
       .eq('user_id', userId)
-      .eq('log_date', date)
 
-    const totals = entries?.reduce(
+    if (!error) {
+      const updated = foodEntries.filter(f => f.id !== id)
+      setFoodEntries(updated)
+      await recalculateFoodTotals(updated)
+    }
+    return { error }
+  }
+
+  const recalculateFoodTotals = async (entries) => {
+    const totals = (entries || []).reduce(
       (acc, e) => ({
         calories: acc.calories + (e.calories || 0),
-        protein: acc.protein + (e.protein || 0),
-        carbs: acc.carbs + (e.carbs || 0),
-        fat: acc.fat + (e.fat || 0),
+        protein: acc.protein + (parseFloat(e.protein) || 0),
+        carbs: acc.carbs + (parseFloat(e.carbs) || 0),
+        fat: acc.fat + (parseFloat(e.fat) || 0),
       }),
       { calories: 0, protein: 0, carbs: 0, fat: 0 }
-    ) || { calories: 0, protein: 0, carbs: 0, fat: 0 }
+    )
 
-    await supabase
+    const { data: updatedLog } = await supabase
       .from('daily_logs')
       .upsert({
         user_id: userId,
         log_date: date,
         calories_consumed: totals.calories,
-        protein_consumed: totals.protein,
-        carbs_consumed: totals.carbs,
-        fat_consumed: totals.fat,
+        protein_consumed: parseFloat(totals.protein.toFixed(1)),
+        carbs_consumed: parseFloat(totals.carbs.toFixed(1)),
+        fat_consumed: parseFloat(totals.fat.toFixed(1)),
       })
+      .select()
+      .single()
 
-    await fetchLog()
+    if (updatedLog) setLog(updatedLog)
+    else setLog(prev => prev ? {
+      ...prev,
+      calories_consumed: totals.calories,
+      protein_consumed: totals.protein,
+      carbs_consumed: totals.carbs,
+      fat_consumed: totals.fat,
+    } : null)
   }
 
-  const logWorkout = async (workoutData) => {
-    const { error } = await supabase
-      .from('daily_logs')
-      .upsert({
-        user_id: userId,
-        log_date: date,
-        workout_done: true,
-        ...workoutData,
-      })
+  // ─── Workout entries ──────────────────────────────────────
+  const addWorkoutEntry = async (entry) => {
+    const { data, error } = await supabase
+      .from('workout_entries')
+      .insert({ ...entry, user_id: userId, log_date: date })
+      .select()
+      .single()
 
-    if (!error) await fetchLog()
+    if (!error && data) {
+      const updated = [...workoutEntries, data]
+      setWorkoutEntries(updated)
+      await recalculateWorkoutCalories(updated)
+    }
+    return { data, error }
+  }
+
+  const removeWorkoutEntry = async (id) => {
+    const { error } = await supabase
+      .from('workout_entries')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId)
+
+    if (!error) {
+      const updated = workoutEntries.filter(w => w.id !== id)
+      setWorkoutEntries(updated)
+      await recalculateWorkoutCalories(updated)
+    }
     return { error }
   }
 
-  return { log, foodEntries, loading, addFoodEntry, logWorkout, refetch: fetchLog }
+  const recalculateWorkoutCalories = async (entries) => {
+    const totalBurned = (entries || []).reduce((s, w) => s + (w.calories_burned || 0), 0)
+    await supabase.from('daily_logs').upsert({
+      user_id: userId,
+      log_date: date,
+      calories_burned: totalBurned,
+    })
+    setLog(prev => prev ? { ...prev, calories_burned: totalBurned } : null)
+  }
+
+  return {
+    log,
+    foodEntries,
+    workoutEntries,
+    loading,
+    morningCheckin,
+    addFoodEntry,
+    removeFoodEntry,
+    addWorkoutEntry,
+    removeWorkoutEntry,
+    refetch: fetchLog,
+  }
 }
