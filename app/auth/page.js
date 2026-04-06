@@ -1,12 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 export default function AuthPage() {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
+  const router = useRouter()
   const supabase = createClient()
 
   const handleLogin = async (e) => {
@@ -67,6 +69,19 @@ export default function AuthPage() {
             <p className="text-center text-forja-muted text-sm mt-6">
               Sin contraseñas. Solo un enlace seguro a tu email.
             </p>
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-forja-border" />
+              </div>
+              <div className="relative flex justify-center text-xs text-forja-muted bg-forja-surface px-2">o</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => router.push('/onboarding')}
+              className="w-full border border-forja-border hover:border-forja-primary text-forja-muted hover:text-forja-text font-medium py-3 rounded-xl transition-colors text-sm"
+            >
+              Continuar sin cuenta →
+            </button>
           </div>
         )}
       </div>
