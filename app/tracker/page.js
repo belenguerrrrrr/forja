@@ -87,8 +87,13 @@ const EMPTY_DATA = () => ({
   workouts: [],
 })
 
+function localToday() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 function todayKey() {
-  return `forja_tracker_${new Date().toISOString().split('T')[0]}`
+  return `forja_tracker_${localToday()}`
 }
 function r1(n) { return Math.round(n * 10) / 10 }
 function mealMacros(items) {
@@ -489,7 +494,7 @@ export default function TrackerPage() {
   const viewDateRef = useRef('')
 
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0]
+    const today = localToday()
     viewDateRef.current = today
     setViewDate(today)
     try { const s = localStorage.getItem(`forja_tracker_${today}`); if (s) setData(JSON.parse(s)) } catch {}
@@ -509,7 +514,7 @@ export default function TrackerPage() {
 
   // Navegar a otra fecha
   const goToDate = (date) => {
-    const today = new Date().toISOString().split('T')[0]
+    const today = localToday()
     if (date > today) return  // no navegar al futuro
     viewDateRef.current = date
     setViewDate(date)
@@ -537,7 +542,7 @@ export default function TrackerPage() {
   const net       = consumed - burned
   const pctHeader = targetCal > 0 ? Math.min((consumed / targetCal) * 100, 100) : 0
 
-  const today   = mounted ? new Date().toISOString().split('T')[0] : ''
+  const today   = mounted ? localToday() : ''
   const isToday = viewDate === today
   const dateStr = viewDate ? formatDate(viewDate) : ''
 
