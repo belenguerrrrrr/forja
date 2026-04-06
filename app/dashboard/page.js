@@ -14,7 +14,7 @@ function DashboardContent() {
 
   useEffect(() => {
     if (userLoading || planLoading) return
-    if (!user) { router.push('/auth'); return }
+    if (!user) return // auth desactivada temporalmente
 
     // Si es Pro, ir al dashboard Pro
     if (['pro_monthly', 'pro_annual', 'lifetime'].includes(profile?.plan)) {

@@ -785,7 +785,7 @@ function ProContent() {
   useEffect(() => {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/auth'); return }
+      if (!user) return // auth desactivada temporalmente
       setUser(user)
 
       const [{ data: plan }, { data: ud }, logsRes, weightsRes] = await Promise.all([
