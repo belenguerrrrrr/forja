@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 
 // ─── Configuración de preguntas ───────────────────────────────────────────────
 
@@ -291,7 +290,6 @@ function AgeGenderInput({ value = {}, onChange }) {
 
 export default function OnboardingPage() {
   const router = useRouter()
-  const supabase = createClient()
   const [answers, setAnswers] = useState({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -369,8 +367,6 @@ export default function OnboardingPage() {
     setLoading(true)
     setError('')
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-
       const userData = {
         goal: answers.goal,
         goal_description: answers.goal_description || null,
@@ -388,25 +384,18 @@ export default function OnboardingPage() {
         onboarding_completed: true,
       }
 
-      if (user) {
-        // Con sesión: guardar en Supabase y generar plan via API normal
-        const { error: dbError } = await supabase.from('user_data').upsert({ user_id: user.id, ...userData })
-        if (dbError) throw dbError
-        const res = await fetch('/api/plan', { method: 'POST' })
-        if (!res.ok) throw new Error('Error generando el plan')
-      } else {
-        // Sin sesión: generar plan pasando los datos en el body, guardar en localStorage
-        const res = await fetch('/api/plan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userData }),
-        })
-        if (!res.ok) throw new Error('Error generando el plan')
-        const { plan } = await res.json()
-        localStorage.setItem('forja_guest_plan', JSON.stringify(plan))
-      }
+      localStorage.setItem('forja_onboarding_data', JSON.stringify(userData))
 
-      router.push('/dashboard')
+      const res = await fetch('/api/plan/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData),
+      })
+      if (!res.ok) throw new Error('Error generando el plan')
+      const { plan } = await res.json()
+      localStorage.setItem('forja_plan_preview', JSON.stringify(plan))
+
+      router.push('/diagnostico')
     } catch (err) {
       setError('Ha ocurrido un error. Inténtalo de nuevo.')
       setLoading(false)
