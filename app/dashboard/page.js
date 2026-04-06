@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, Suspense } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useUser } from '@/hooks/useUser'
 import { usePlan } from '@/hooks/usePlan'
@@ -9,12 +9,17 @@ function DashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, profile, loading: userLoading } = useUser()
-  const { plan, userData, loading: planLoading } = usePlan(user?.id)
+  const { plan: dbPlan, userData, loading: planLoading } = usePlan(user?.id)
+  const [guestPlan, setGuestPlan] = useState(null)
   const showUpgrade = searchParams.get('upgrade') === 'true'
 
   useEffect(() => {
+    if (!user) {
+      const stored = localStorage.getItem('forja_guest_plan')
+      if (stored) setGuestPlan(JSON.parse(stored))
+      return
+    }
     if (userLoading || planLoading) return
-    if (!user) return // auth desactivada temporalmente
 
     // Si es Pro, ir al dashboard Pro
     if (['pro_monthly', 'pro_annual', 'lifetime'].includes(profile?.plan)) {
@@ -28,7 +33,9 @@ function DashboardContent() {
     }
   }, [user, profile, userData, userLoading, planLoading])
 
-  if (userLoading || planLoading) {
+  const plan = user ? dbPlan : guestPlan
+
+  if (user && (userLoading || planLoading)) {
     return (
       <div className="min-h-screen bg-forja-bg flex items-center justify-center">
         <div className="text-forja-primary font-display text-2xl animate-pulse">FORJA</div>

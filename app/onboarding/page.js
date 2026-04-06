@@ -370,34 +370,41 @@ export default function OnboardingPage() {
     setError('')
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/auth'); return }
 
-      // Guardar user_data en Supabase
-      const { error: dbError } = await supabase
-        .from('user_data')
-        .upsert({
-          user_id: user.id,
-          goal: answers.goal,
-          goal_description: answers.goal_description || null,
-          target_weight: answers.target_weight || null,
-          current_weight: Number(answers.current_weight),
-          height: Number(answers.height),
-          age: answers.age,
-          gender: answers.gender,
-          activity_level: answers.activity_level,
-          training_days_per_week: answers.training_days_per_week || 3,
-          training_duration_minutes: answers.training_duration_minutes || 60,
-          gym_access: answers.gym_access === true || answers.gym_access === 'true',
-          injuries: answers.injuries?.filter(i => i !== 'none') || [],
-          dietary_restrictions: answers.dietary_restrictions?.filter(d => d !== 'none') || [],
-          onboarding_completed: true,
+      const userData = {
+        goal: answers.goal,
+        goal_description: answers.goal_description || null,
+        target_weight: answers.target_weight || null,
+        current_weight: Number(answers.current_weight),
+        height: Number(answers.height),
+        age: answers.age,
+        gender: answers.gender,
+        activity_level: answers.activity_level,
+        training_days_per_week: answers.training_days_per_week || 3,
+        training_duration_minutes: answers.training_duration_minutes || 60,
+        gym_access: answers.gym_access === true || answers.gym_access === 'true',
+        injuries: answers.injuries?.filter(i => i !== 'none') || [],
+        dietary_restrictions: answers.dietary_restrictions?.filter(d => d !== 'none') || [],
+        onboarding_completed: true,
+      }
+
+      if (user) {
+        // Con sesión: guardar en Supabase y generar plan via API normal
+        const { error: dbError } = await supabase.from('user_data').upsert({ user_id: user.id, ...userData })
+        if (dbError) throw dbError
+        const res = await fetch('/api/plan', { method: 'POST' })
+        if (!res.ok) throw new Error('Error generando el plan')
+      } else {
+        // Sin sesión: generar plan pasando los datos en el body, guardar en localStorage
+        const res = await fetch('/api/plan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userData }),
         })
-
-      if (dbError) throw dbError
-
-      // Llamar API para generar plan
-      const res = await fetch('/api/plan', { method: 'POST' })
-      if (!res.ok) throw new Error('Error generando el plan')
+        if (!res.ok) throw new Error('Error generando el plan')
+        const { plan } = await res.json()
+        localStorage.setItem('forja_guest_plan', JSON.stringify(plan))
+      }
 
       router.push('/dashboard')
     } catch (err) {

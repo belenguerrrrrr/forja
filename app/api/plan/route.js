@@ -7,57 +7,66 @@ export async function POST(request) {
   try {
     const supabase = createClient()
 
-    // Verificar autenticación
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const { data: { user } } = await supabase.auth.getUser()
+
+    let userData
+
+    if (user) {
+      // Con sesión: leer datos de Supabase
+      const { data, error: userError } = await supabase
+        .from('user_data')
+        .select('*')
+        .eq('user_id', user.id)
+        .single()
+
+      if (userError || !data) {
+        return NextResponse.json({ error: 'Datos de usuario no encontrados' }, { status: 404 })
+      }
+      userData = data
+
+      // Desactivar plan anterior
+      await supabase.from('plans').update({ is_active: false }).eq('user_id', user.id)
+    } else {
+      // Sin sesión: leer datos del body
+      const body = await request.json().catch(() => null)
+      if (!body?.userData) {
+        return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+      }
+      userData = body.userData
     }
-
-    // Obtener datos del usuario
-    const { data: userData, error: userError } = await supabase
-      .from('user_data')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
-
-    if (userError || !userData) {
-      return NextResponse.json({ error: 'Datos de usuario no encontrados' }, { status: 404 })
-    }
-
-    // Desactivar plan anterior si existe
-    await supabase
-      .from('plans')
-      .update({ is_active: false })
-      .eq('user_id', user.id)
 
     // Generar plan con Claude
     const planData = await generatePlan(userData)
 
-    // Guardar plan en Supabase
-    const { data: plan, error: planError } = await supabase
-      .from('plans')
-      .insert({
-        user_id: user.id,
-        health_score: planData.health_score,
-        daily_calories: planData.daily_calories,
-        protein_grams: planData.protein_grams,
-        carbs_grams: planData.carbs_grams,
-        fat_grams: planData.fat_grams,
-        training_plan: planData.training_plan,
-        summary: planData.summary,
-        key_tips: planData.key_tips,
-        is_active: true,
-        version: 1,
-      })
-      .select()
-      .single()
+    if (user) {
+      // Con sesión: guardar plan en Supabase
+      const { data: plan, error: planError } = await supabase
+        .from('plans')
+        .insert({
+          user_id: user.id,
+          health_score: planData.health_score,
+          daily_calories: planData.daily_calories,
+          protein_grams: planData.protein_grams,
+          carbs_grams: planData.carbs_grams,
+          fat_grams: planData.fat_grams,
+          training_plan: planData.training_plan,
+          summary: planData.summary,
+          key_tips: planData.key_tips,
+          is_active: true,
+          version: 1,
+        })
+        .select()
+        .single()
 
-    if (planError) throw planError
+      if (planError) throw planError
 
-    // Enviar email de bienvenida (no bloqueante)
-    sendWelcomeEmail(user.email, user.user_metadata?.full_name, planData.summary).catch(console.error)
+      sendWelcomeEmail(user.email, user.user_metadata?.full_name, planData.summary).catch(console.error)
 
-    return NextResponse.json({ success: true, plan })
+      return NextResponse.json({ success: true, plan })
+    } else {
+      // Sin sesión: devolver plan directamente (se guarda en localStorage)
+      return NextResponse.json({ success: true, plan: planData })
+    }
 
   } catch (error) {
     console.error('Error generating plan:', error)
