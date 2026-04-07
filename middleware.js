@@ -4,11 +4,6 @@ import { NextResponse } from 'next/server'
 export async function middleware(request) {
   const pathname = request.nextUrl.pathname
 
-  // Solo actuar en rutas protegidas
-  if (!pathname.startsWith('/pro') && !pathname.startsWith('/dashboard')) {
-    return NextResponse.next()
-  }
-
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -32,38 +27,23 @@ export async function middleware(request) {
     }
   )
 
-  const { data: { user }, error } = await supabase.auth.getUser()
-
-  console.log('MIDDLEWARE DEBUG:', {
-    pathname,
-    hasUser: !!user,
-    userId: user?.id,
-    error: error?.message,
-    cookieCount: request.cookies.getAll().length,
-  })
+  const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    console.log('MIDDLEWARE: No user, redirecting to /auth')
-    return NextResponse.redirect(new URL('/auth', request.url))
+    const redirectUrl = new URL('/auth', request.url)
+    redirectUrl.searchParams.set('next', pathname)
+    return NextResponse.redirect(redirectUrl)
   }
 
   if (pathname.startsWith('/pro')) {
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile } = await supabase
       .from('profiles')
-      .select('plan, subscription_status')
+      .select('plan')
       .eq('id', user.id)
       .single()
 
-    console.log('MIDDLEWARE PROFILE:', {
-      plan: profile?.plan,
-      status: profile?.subscription_status,
-      profileError: profileError?.message,
-    })
-
     const isPro = ['pro_monthly', 'pro_annual', 'lifetime'].includes(profile?.plan)
-
     if (!isPro) {
-      console.log('MIDDLEWARE: Not pro, redirecting to dashboard')
       return NextResponse.redirect(new URL('/dashboard?upgrade=true', request.url))
     }
   }
