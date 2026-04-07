@@ -37,7 +37,7 @@ export function useTracker(userId, date = new Date().toISOString().split('T')[0]
       sleep_hours: sleepHours ? parseFloat(sleepHours) : null,
       sleep_quality: sleepQuality || null,
       energy_level: energyLevel || null,
-    })
+    }, { onConflict: 'user_id,log_date' })
     if (!error) await fetchLog()
     return { error }
   }
@@ -108,7 +108,7 @@ export function useTracker(userId, date = new Date().toISOString().split('T')[0]
         protein_consumed: parseFloat(totals.protein.toFixed(1)),
         carbs_consumed: parseFloat(totals.carbs.toFixed(1)),
         fat_consumed: parseFloat(totals.fat.toFixed(1)),
-      })
+      }, { onConflict: 'user_id,log_date' })
       .select()
       .single()
 
@@ -159,7 +159,7 @@ export function useTracker(userId, date = new Date().toISOString().split('T')[0]
       user_id: userId,
       log_date: date,
       calories_burned: totalBurned,
-    })
+    }, { onConflict: 'user_id,log_date' })
     setLog(prev => prev ? { ...prev, calories_burned: totalBurned } : null)
   }
 

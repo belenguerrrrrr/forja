@@ -553,7 +553,8 @@ function TrackerTab({ user, plan, userData }) {
   const totalCarbs = foodEntries.reduce((s, f) => s + (parseFloat(f.carbs) || 0), 0)
   const totalFat = foodEntries.reduce((s, f) => s + (parseFloat(f.fat) || 0), 0)
   const totalBurned = workoutEntries.reduce((s, w) => s + (w.calories_burned || 0), 0)
-  const netBalance = (plan?.daily_calories || 0) - totalKcal + totalBurned
+  const netCalories = totalKcal - totalBurned   // consumidas − quemadas
+  const remaining = (plan?.daily_calories || 0) - netCalories  // objetivo − neto
 
   const getMealFoods = (mealId) => foodEntries.filter(f => f.meal_type === mealId)
 
@@ -872,17 +873,17 @@ function TrackerTab({ user, plan, userData }) {
         {/* Barra de calorías */}
         <div>
           <div className="flex justify-between text-xs mb-1.5">
-            <span className="text-[#64748B]">Calorías consumidas</span>
-            <span className={`font-semibold ${totalKcal > (plan?.daily_calories || 0) ? 'text-orange-500' : 'text-[#0F172A]'}`}>
-              {totalKcal} / {plan?.daily_calories || 0} kcal
+            <span className="text-[#64748B]">Neto (consumido − quemado)</span>
+            <span className={`font-semibold ${netCalories > (plan?.daily_calories || 0) ? 'text-orange-500' : 'text-[#0F172A]'}`}>
+              {netCalories} / {plan?.daily_calories || 0} kcal
             </span>
           </div>
           <div className="h-3 bg-[#E2E8F0] rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-700"
               style={{
-                width: `${plan?.daily_calories ? Math.min(100, Math.round(totalKcal / plan.daily_calories * 100)) : 0}%`,
-                background: totalKcal > (plan?.daily_calories || 0)
+                width: `${plan?.daily_calories ? Math.min(100, Math.round(netCalories / plan.daily_calories * 100)) : 0}%`,
+                background: netCalories > (plan?.daily_calories || 0)
                   ? 'linear-gradient(90deg, #f97316, #ea580c)'
                   : 'linear-gradient(90deg, #16A34A, #15803D)',
               }}
@@ -910,9 +911,9 @@ function TrackerTab({ user, plan, userData }) {
             <div className="text-xs text-[#94A3B8]">kcal</div>
           </div>
           <div className="text-center">
-            <div className="text-xs text-[#94A3B8] mb-0.5">Balance neto</div>
-            <div className={`text-xl font-bold ${netBalance >= 0 ? 'text-[#16A34A]' : 'text-orange-500'}`}>
-              {netBalance > 0 ? '+' : ''}{netBalance}
+            <div className="text-xs text-[#94A3B8] mb-0.5">Restantes</div>
+            <div className={`text-xl font-bold ${remaining >= 0 ? 'text-[#16A34A]' : 'text-orange-500'}`}>
+              {remaining > 0 ? '+' : ''}{remaining}
             </div>
             <div className="text-xs text-[#94A3B8]">kcal</div>
           </div>
