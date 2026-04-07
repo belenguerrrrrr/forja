@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useUser } from '@/hooks/useUser'
 import { usePlan } from '@/hooks/usePlan'
+import { createClient } from '@/lib/supabase/client'
 import BottomNav from '@/components/shared/BottomNav'
 
 function DashboardContent() {
@@ -14,6 +15,31 @@ function DashboardContent() {
   const [guestPlan, setGuestPlan] = useState(null)
   const showUpgrade = searchParams.get('upgrade') === 'true'
 
+  // Protección cliente: verificar sesión y plan
+  useEffect(() => {
+    const checkAuth = async () => {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push('/auth')
+        return
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('plan')
+        .eq('id', session.user.id)
+        .single()
+
+      const isPro = ['pro_monthly', 'pro_annual', 'lifetime'].includes(profile?.plan)
+      if (isPro) {
+        router.push('/pro')
+        return
+      }
+    }
+    checkAuth()
+  }, [])
+
   useEffect(() => {
     if (!user) {
       const stored = localStorage.getItem('forja_guest_plan')
@@ -21,12 +47,6 @@ function DashboardContent() {
       return
     }
     if (userLoading || planLoading) return
-
-    // Si es Pro, ir al dashboard Pro
-    if (['pro_monthly', 'pro_annual', 'lifetime'].includes(profile?.plan)) {
-      router.push('/pro')
-      return
-    }
 
     // Si no ha completado onboarding, ir a onboarding
     if (!userData?.onboarding_completed) {

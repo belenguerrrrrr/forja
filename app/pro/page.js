@@ -1116,11 +1116,19 @@ function ProContent() {
   useEffect(() => {
     const init = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) {
-          router.replace('/auth')
-          return
-        }
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) { router.push('/auth'); return }
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('plan')
+          .eq('id', session.user.id)
+          .single()
+
+        const isPro = ['pro_monthly', 'pro_annual', 'lifetime'].includes(profile?.plan)
+        if (!isPro) { router.push('/dashboard?upgrade=true'); return }
+
+        const user = session.user
         setUser(user)
 
         const thirtyDaysAgo = new Date()
