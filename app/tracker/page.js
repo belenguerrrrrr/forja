@@ -335,8 +335,98 @@ function MealInput({ onAdd }) {
   )
 }
 
+// ─── AIActivity ───────────────────────────────────────────────────────────────
+function AIActivity({ onAddAll, userWeight }) {
+  const [text, setText]       = useState('')
+  const [loading, setLoading] = useState(false)
+  const [preview, setPreview] = useState(null)
+  const [error, setError]     = useState('')
+
+  const analyze = async () => {
+    if (!text.trim()) return
+    setLoading(true); setError(''); setPreview(null)
+    try {
+      const res  = await fetch('/api/activity/parse', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: text, weight_kg: userWeight }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error')
+      setPreview(data.activities || [])
+    } catch { setError('No se pudo analizar. Inténtalo de nuevo.') }
+    finally { setLoading(false) }
+  }
+
+  const confirm = () => {
+    const items = preview.map((act, i) => ({
+      id: Date.now() + i,
+      type: 'ai',
+      label: act.name,
+      emoji: act.emoji || '💪',
+      duration_minutes: act.duration_minutes,
+      calories_burned: act.calories_burned,
+      notes: act.notes || '',
+    }))
+    onAddAll(items)
+    setText(''); setPreview(null)
+  }
+
+  if (preview) {
+    const totalCal = preview.reduce((a, act) => a + act.calories_burned, 0)
+    const totalMin = preview.reduce((a, act) => a + act.duration_minutes, 0)
+    return (
+      <div className="space-y-2">
+        {preview.map((act, i) => (
+          <div key={i} className="flex items-center gap-3 bg-[#F8FAFC] rounded-xl px-3 py-2.5">
+            <div className="w-9 h-9 rounded-xl bg-[#EFF6FF] flex items-center justify-center text-lg flex-shrink-0">{act.emoji}</div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-[#0F172A] truncate">{act.name}</div>
+              {act.notes && <div className="text-xs text-[#94A3B8] truncate">{act.notes}</div>}
+            </div>
+            <div className="text-right flex-shrink-0">
+              <div className="text-sm font-bold text-[#3B82F6]">-{act.calories_burned} kcal</div>
+              <div className="text-[11px] text-[#94A3B8]">{act.duration_minutes} min</div>
+            </div>
+          </div>
+        ))}
+        <div className="flex items-center justify-between bg-[#EFF6FF] border border-[#BFDBFE] rounded-xl px-4 py-2.5">
+          <span className="text-sm font-bold text-[#2563EB]">Total</span>
+          <div className="text-right">
+            <span className="text-base font-bold text-[#3B82F6]">-{totalCal} kcal</span>
+            <span className="text-xs text-[#64748B] ml-2">{totalMin} min</span>
+          </div>
+        </div>
+        <div className="flex gap-2 pt-1">
+          <button onClick={() => setPreview(null)} className="flex-1 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#64748B] hover:bg-[#F8FAFC] transition-colors">Editar</button>
+          <button onClick={confirm} className="flex-1 py-2.5 rounded-xl bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-bold transition-colors">Añadir ✓</button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      <textarea value={text} onChange={e => setText(e.target.value)} rows={3}
+        placeholder={'Describe tu actividad...\nEj: he hecho 1 hora de tenis suave y he corrido 5km a un ritmo de 4:30'}
+        className="w-full bg-[#F8FAFC] border border-[#E2E8F0] focus:border-[#16A34A] rounded-xl px-4 py-3 text-sm resize-none focus:outline-none transition-colors leading-relaxed"
+      />
+      {error && <p className="text-xs text-red-500">{error}</p>}
+      <button onClick={analyze} disabled={!text.trim() || loading}
+        className={`w-full py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+          text.trim() && !loading ? 'bg-[#0F172A] hover:bg-[#1E293B] text-white' : 'bg-[#E2E8F0] text-[#94A3B8] cursor-not-allowed'
+        }`}
+      >
+        {loading
+          ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Calculando...</>
+          : '✨ Calcular calorías con IA'}
+      </button>
+    </div>
+  )
+}
+
 // ─── WorkoutModal ─────────────────────────────────────────────────────────────
 function WorkoutModal({ show, onClose, onAdd, userWeight }) {
+  const [mode, setMode]         = useState('ai')
   const [type, setType]         = useState('weights')
   const [duration, setDuration] = useState(45)
   if (!show) return null
@@ -345,43 +435,62 @@ function WorkoutModal({ show, onClose, onAdd, userWeight }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-white w-full sm:max-w-sm rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="font-bold text-[#0F172A] text-lg">Añadir entrenamiento</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-[#0F172A] text-lg">Añadir actividad</h3>
           <button onClick={onClose} className="text-[#94A3B8] hover:text-[#0F172A] text-2xl leading-none">✕</button>
         </div>
-        <div className="space-y-5">
-          <div>
-            <label className="text-xs text-[#64748B] font-semibold uppercase tracking-wider mb-2 block">Actividad</label>
-            <div className="grid grid-cols-3 gap-2">
-              {WORKOUT_TYPES.map(w => (
-                <button key={w.value} onClick={() => setType(w.value)}
-                  className={`py-2.5 px-1 rounded-xl text-xs font-medium transition-all flex flex-col items-center gap-1 ${
-                    type === w.value ? 'bg-[#16A34A] text-white shadow-sm' : 'bg-[#F1F5F9] text-[#64748B] hover:bg-[#E2E8F0]'
-                  }`}
-                >
-                  <span className="text-base">{w.emoji}</span>{w.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label className="text-xs text-[#64748B] font-semibold uppercase tracking-wider mb-2 block">
-              Duración: <span className="text-[#0F172A] normal-case font-bold">{duration} min</span>
-            </label>
-            <input type="range" min={10} max={180} step={5} value={duration}
-              onChange={e => setDuration(Number(e.target.value))} className="w-full accent-[#16A34A]"
-            />
-            <div className="flex justify-between text-xs text-[#94A3B8] mt-1"><span>10 min</span><span>180 min</span></div>
-          </div>
-          <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-2xl p-4 text-center">
-            <div className="text-4xl font-bold text-[#16A34A]" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>~{cal} kcal</div>
-            <div className="text-xs text-[#64748B] mt-0.5">gasto estimado · {wt.emoji} {duration} min</div>
-          </div>
-          <button
-            onClick={() => { onAdd({ id: Date.now(), type, label: wt.label, emoji: wt.emoji, duration_minutes: duration, calories_burned: cal }); onClose() }}
-            className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-bold py-4 rounded-xl transition-colors"
-          >Guardar entrenamiento</button>
+
+        {/* Tabs IA / Manual */}
+        <div className="flex bg-[#F1F5F9] rounded-xl p-1 mb-5">
+          {[['ai', '✨ Describir con IA'], ['manual', '⚙️ Manual']].map(([m, lbl]) => (
+            <button key={m} onClick={() => setMode(m)}
+              className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                mode === m ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'
+              }`}
+            >{lbl}</button>
+          ))}
         </div>
+
+        {mode === 'ai' ? (
+          <AIActivity
+            userWeight={userWeight}
+            onAddAll={(acts) => { acts.forEach(a => onAdd(a)); onClose() }}
+          />
+        ) : (
+          <div className="space-y-5">
+            <div>
+              <label className="text-xs text-[#64748B] font-semibold uppercase tracking-wider mb-2 block">Actividad</label>
+              <div className="grid grid-cols-3 gap-2">
+                {WORKOUT_TYPES.map(w => (
+                  <button key={w.value} onClick={() => setType(w.value)}
+                    className={`py-2.5 px-1 rounded-xl text-xs font-medium transition-all flex flex-col items-center gap-1 ${
+                      type === w.value ? 'bg-[#16A34A] text-white shadow-sm' : 'bg-[#F1F5F9] text-[#64748B] hover:bg-[#E2E8F0]'
+                    }`}
+                  >
+                    <span className="text-base">{w.emoji}</span>{w.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-[#64748B] font-semibold uppercase tracking-wider mb-2 block">
+                Duración: <span className="text-[#0F172A] normal-case font-bold">{duration} min</span>
+              </label>
+              <input type="range" min={10} max={180} step={5} value={duration}
+                onChange={e => setDuration(Number(e.target.value))} className="w-full accent-[#16A34A]"
+              />
+              <div className="flex justify-between text-xs text-[#94A3B8] mt-1"><span>10 min</span><span>180 min</span></div>
+            </div>
+            <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-2xl p-4 text-center">
+              <div className="text-4xl font-bold text-[#16A34A]" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>~{cal} kcal</div>
+              <div className="text-xs text-[#64748B] mt-0.5">gasto estimado · {wt.emoji} {duration} min</div>
+            </div>
+            <button
+              onClick={() => { onAdd({ id: Date.now(), type, label: wt.label, emoji: wt.emoji, duration_minutes: duration, calories_burned: cal }); onClose() }}
+              className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-bold py-4 rounded-xl transition-colors"
+            >Guardar entrenamiento</button>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -752,8 +861,8 @@ export default function TrackerPage() {
                     {w.emoji || '💪'}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-sm text-[#0F172A]">{w.label}</div>
-                    <div className="text-xs text-[#94A3B8]">{w.duration_minutes} min</div>
+                    <div className="font-semibold text-sm text-[#0F172A] truncate">{w.label}</div>
+                    <div className="text-xs text-[#94A3B8] truncate">{w.duration_minutes} min{w.notes ? ` · ${w.notes}` : ''}</div>
                   </div>
                   <div className="text-right flex-shrink-0">
                     <div className="text-base font-bold text-[#3B82F6]" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>
