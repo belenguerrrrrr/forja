@@ -9,12 +9,16 @@ export async function POST(request) {
     const { supabase, user, error: authError } = await getUserFromRequest(request)
     if (authError) return authError
 
+    console.log('API PLAN - user:', user?.id)
+
     // Leer datos del usuario desde Supabase
     const { data: userData, error: userError } = await supabase
       .from('user_data')
       .select('*')
       .eq('user_id', user.id)
       .single()
+
+    console.log('API PLAN - userData:', userData)
 
     if (userError || !userData) {
       return NextResponse.json({ error: 'Datos de usuario no encontrados' }, { status: 404 })
@@ -23,8 +27,12 @@ export async function POST(request) {
     // Desactivar plan anterior
     await supabase.from('plans').update({ is_active: false }).eq('user_id', user.id)
 
+    console.log('API PLAN - generating...')
+
     // Generar plan con Claude
     const planData = await generatePlan(userData)
+
+    console.log('API PLAN - plan generated:', !!planData)
 
     // Guardar plan en Supabase
     const { data: plan, error: planError } = await supabase
@@ -44,6 +52,8 @@ export async function POST(request) {
       })
       .select()
       .single()
+
+    console.log('API PLAN - saved:', plan?.id, planError?.message)
 
     if (planError) throw planError
 
