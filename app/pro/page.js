@@ -1117,16 +1117,26 @@ function ProContent() {
     const init = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
+        console.log('SESSION:', session?.user?.email, session?.access_token?.slice(0, 20))
+
         if (!session) { router.push('/auth'); return }
 
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('plan')
+          .select('plan, subscription_status')
           .eq('id', session.user.id)
           .maybeSingle()
 
+        console.log('PROFILE:', profile, profileError)
+
         const isPro = ['pro_monthly', 'pro_annual', 'lifetime'].includes(profile?.plan)
-        if (!isPro) { router.push('/dashboard?upgrade=true'); return }
+        console.log('IS PRO:', isPro)
+
+        if (!isPro) {
+          console.log('NOT PRO - showing empty state')
+          setLoading(false)
+          return
+        }
 
         const user = session.user
         setUser(user)
