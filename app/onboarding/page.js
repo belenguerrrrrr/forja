@@ -368,44 +368,65 @@ export default function OnboardingPage() {
     setLoading(true)
     setError('')
     try {
-      const userData = {
-        goal: answers.goal,
-        goal_description: answers.goal_description || null,
-        target_weight: answers.target_weight || null,
-        current_weight: Number(answers.current_weight),
-        height: Number(answers.height),
-        age: answers.age,
-        gender: answers.gender,
-        activity_level: answers.activity_level,
-        training_days_per_week: answers.training_days_per_week || 3,
-        training_duration_minutes: answers.training_duration_minutes || 60,
-        gym_access: answers.gym_access === true || answers.gym_access === 'true',
-        injuries: answers.injuries?.filter(i => i !== 'none') || [],
-        dietary_restrictions: answers.dietary_restrictions?.filter(d => d !== 'none') || [],
-        onboarding_completed: true,
-      }
-
-      localStorage.setItem('forja_onboarding_data', JSON.stringify(userData))
-
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
-      const token = session?.access_token
 
-      const res = await fetch('/api/plan/preview', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(userData),
-      })
-      if (!res.ok) throw new Error('Error generando el plan')
-      const { plan } = await res.json()
-      localStorage.setItem('forja_plan_preview', JSON.stringify(plan))
+      if (session) {
+        // Usuario logado — guardar en Supabase y generar plan real
+        const { error: dbError } = await supabase
+          .from('user_data')
+          .upsert({
+            user_id: session.user.id,
+            goal: answers.goal,
+            goal_description: answers.goal_description || null,
+            target_weight: answers.target_weight ? Number(answers.target_weight) : null,
+            current_weight: Number(answers.current_weight),
+            height: Number(answers.height),
+            age: Number(answers.age),
+            gender: answers.gender,
+            activity_level: answers.activity_level,
+            training_days_per_week: answers.training_days_per_week || 3,
+            training_duration_minutes: answers.training_duration_minutes || 60,
+            gym_access: answers.gym_access === true || answers.gym_access === 'true',
+            injuries: answers.injuries?.filter(i => i !== 'none') || [],
+            dietary_restrictions: answers.dietary_restrictions?.filter(d => d !== 'none') || [],
+            onboarding_completed: true,
+          })
 
-      router.push('/diagnostico')
+        if (dbError) throw dbError
+
+        const res = await fetch('/api/plan', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        })
+
+        if (!res.ok) {
+          const err = await res.json()
+          throw new Error(err.error || 'Error generando el plan')
+        }
+
+        router.push('/pro')
+      } else {
+        // Usuario no logado — guardar en localStorage y llamar preview
+        localStorage.setItem('forja_onboarding_data', JSON.stringify(answers))
+
+        const res = await fetch('/api/plan/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(answers),
+        })
+
+        if (!res.ok) throw new Error('Error generando el plan')
+        const data = await res.json()
+        localStorage.setItem('forja_plan_data', JSON.stringify(data.plan))
+        router.push('/diagnostico')
+      }
     } catch (err) {
-      setError('Ha ocurrido un error. Inténtalo de nuevo.')
+      console.error('handleSubmit error:', err)
+      setError(err.message || 'Ha ocurrido un error. Inténtalo de nuevo.')
       setLoading(false)
     }
   }
