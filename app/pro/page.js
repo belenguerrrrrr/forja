@@ -204,6 +204,301 @@ function DashboardTab({ plan, userData, logs, setActiveTab }) {
   )
 }
 
+// ─── AIDescribe (input comida por lenguaje natural) ───────────────────────────
+function AIDescribe({ onAddAll }) {
+  const [text, setText]       = useState('')
+  const [loading, setLoading] = useState(false)
+  const [preview, setPreview] = useState(null)
+  const [error, setError]     = useState('')
+  const r1 = n => Math.round(n * 10) / 10
+
+  const analyze = async () => {
+    if (!text.trim()) return
+    setLoading(true); setError(''); setPreview(null)
+    try {
+      const res  = await fetch('/api/nutrition/parse', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: text }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error')
+      setPreview(data.items || [])
+    } catch { setError('No se pudo analizar. Inténtalo de nuevo.') }
+    finally { setLoading(false) }
+  }
+
+  const confirm = () => {
+    onAddAll(preview)
+    setText(''); setPreview(null)
+  }
+
+  if (preview) {
+    const total = preview.reduce((a, it) => ({
+      cal: a.cal + it.calories, p: a.p + it.protein,
+      c: a.c + it.carbs,        f: a.f + it.fat,
+    }), { cal: 0, p: 0, c: 0, f: 0 })
+
+    return (
+      <div className="space-y-2">
+        {preview.map((item, i) => (
+          <div key={i} className="flex items-center justify-between bg-[#F8FAFC] rounded-xl px-3 py-2.5">
+            <div className="flex-1 min-w-0 mr-3">
+              <div className="text-sm font-medium text-[#0F172A] truncate">{item.name}</div>
+              <div className="text-xs text-[#94A3B8]">~{item.grams}g estimados</div>
+            </div>
+            <div className="text-right flex-shrink-0">
+              <div className="text-sm font-bold text-[#0F172A]">{Math.round(item.calories)} kcal</div>
+              <div className="text-[11px] text-[#94A3B8]">P{r1(item.protein)} C{r1(item.carbs)} G{r1(item.fat)}</div>
+            </div>
+          </div>
+        ))}
+        <div className="flex items-center justify-between bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl px-4 py-2.5">
+          <span className="text-sm font-bold text-[#15803D]">Total</span>
+          <div className="text-right">
+            <span className="text-base font-bold text-[#16A34A]">{Math.round(total.cal)} kcal</span>
+            <span className="text-xs text-[#64748B] ml-2">P{Math.round(total.p)} C{Math.round(total.c)} G{Math.round(total.f)}</span>
+          </div>
+        </div>
+        <div className="flex gap-2 pt-1">
+          <button onClick={() => setPreview(null)} className="flex-1 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#64748B] hover:bg-[#F8FAFC] transition-colors">Editar</button>
+          <button onClick={confirm} className="flex-1 py-2.5 rounded-xl bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-bold transition-colors">Añadir al registro ✓</button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      <textarea value={text} onChange={e => setText(e.target.value)} rows={3}
+        placeholder={'Describe lo que has comido...\nEj: 2 tostadas de pan integral con AOVE y 30g de pavo, café con leche'}
+        className="w-full bg-[#F8FAFC] border border-[#E2E8F0] focus:border-[#16A34A] rounded-xl px-4 py-3 text-sm resize-none focus:outline-none transition-colors leading-relaxed"
+      />
+      {error && <p className="text-xs text-red-500">{error}</p>}
+      <button onClick={analyze} disabled={!text.trim() || loading}
+        className={`w-full py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+          text.trim() && !loading ? 'bg-[#0F172A] hover:bg-[#1E293B] text-white' : 'bg-[#E2E8F0] text-[#94A3B8] cursor-not-allowed'
+        }`}
+      >
+        {loading
+          ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Analizando...</>
+          : '✨ Calcular macros con IA'}
+      </button>
+    </div>
+  )
+}
+
+// ─── AIActivity (input actividad por lenguaje natural) ────────────────────────
+function AIActivity({ onAddAll, userWeight }) {
+  const [text, setText]       = useState('')
+  const [loading, setLoading] = useState(false)
+  const [preview, setPreview] = useState(null)
+  const [error, setError]     = useState('')
+
+  const analyze = async () => {
+    if (!text.trim()) return
+    setLoading(true); setError(''); setPreview(null)
+    try {
+      const res  = await fetch('/api/activity/parse', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: text, weight_kg: userWeight }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error')
+      setPreview(data.activities || [])
+    } catch { setError('No se pudo analizar. Inténtalo de nuevo.') }
+    finally { setLoading(false) }
+  }
+
+  const confirm = () => {
+    onAddAll(preview)
+    setText(''); setPreview(null)
+  }
+
+  if (preview) {
+    const totalCal = preview.reduce((a, act) => a + act.calories_burned, 0)
+    const totalMin = preview.reduce((a, act) => a + act.duration_minutes, 0)
+    return (
+      <div className="space-y-2">
+        {preview.map((act, i) => (
+          <div key={i} className="flex items-center gap-3 bg-[#F8FAFC] rounded-xl px-3 py-2.5">
+            <div className="w-9 h-9 rounded-xl bg-[#EFF6FF] flex items-center justify-center text-lg flex-shrink-0">{act.emoji}</div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-[#0F172A] truncate">{act.name}</div>
+              {act.notes && <div className="text-xs text-[#94A3B8] truncate">{act.notes}</div>}
+            </div>
+            <div className="text-right flex-shrink-0">
+              <div className="text-sm font-bold text-[#3B82F6]">-{act.calories_burned} kcal</div>
+              <div className="text-[11px] text-[#94A3B8]">{act.duration_minutes} min</div>
+            </div>
+          </div>
+        ))}
+        <div className="flex items-center justify-between bg-[#EFF6FF] border border-[#BFDBFE] rounded-xl px-4 py-2.5">
+          <span className="text-sm font-bold text-[#2563EB]">Total</span>
+          <div className="text-right">
+            <span className="text-base font-bold text-[#3B82F6]">-{totalCal} kcal</span>
+            <span className="text-xs text-[#64748B] ml-2">{totalMin} min</span>
+          </div>
+        </div>
+        <div className="flex gap-2 pt-1">
+          <button onClick={() => setPreview(null)} className="flex-1 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#64748B] hover:bg-[#F8FAFC] transition-colors">Editar</button>
+          <button onClick={confirm} className="flex-1 py-2.5 rounded-xl bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-bold transition-colors">Añadir ✓</button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      <textarea value={text} onChange={e => setText(e.target.value)} rows={3}
+        placeholder={'Describe tu actividad...\nEj: he hecho 1 hora de tenis suave y he corrido 5km a un ritmo de 4:30'}
+        className="w-full bg-[#F8FAFC] border border-[#E2E8F0] focus:border-[#16A34A] rounded-xl px-4 py-3 text-sm resize-none focus:outline-none transition-colors leading-relaxed"
+      />
+      {error && <p className="text-xs text-red-500">{error}</p>}
+      <button onClick={analyze} disabled={!text.trim() || loading}
+        className={`w-full py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+          text.trim() && !loading ? 'bg-[#0F172A] hover:bg-[#1E293B] text-white' : 'bg-[#E2E8F0] text-[#94A3B8] cursor-not-allowed'
+        }`}
+      >
+        {loading
+          ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Calculando...</>
+          : '✨ Calcular calorías con IA'}
+      </button>
+    </div>
+  )
+}
+
+// ─── MealInputPro (tabs IA + Buscar para el tracker Pro) ─────────────────────
+function MealInputPro({ mealId, addFoodEntry, onClose }) {
+  const [mode, setMode]           = useState('ai')
+  const [query, setQuery]         = useState('')
+  const [selectedFood, setSelectedFood] = useState(null)
+  const [grams, setGrams]         = useState('100')
+  const [saving, setSaving]       = useState(false)
+
+  const results = query.length >= 2
+    ? FOOD_DB.filter(f => f.name.toLowerCase().includes(query.toLowerCase())).slice(0, 6)
+    : []
+
+  const handleAIAdd = async (items) => {
+    setSaving(true)
+    for (const item of items) {
+      await addFoodEntry({
+        food_name:      item.name,
+        quantity_grams: item.grams,
+        calories:       Math.round(item.calories),
+        protein:        parseFloat(item.protein.toFixed ? item.protein.toFixed(1) : item.protein),
+        carbs:          parseFloat(item.carbs.toFixed   ? item.carbs.toFixed(1)   : item.carbs),
+        fat:            parseFloat(item.fat.toFixed     ? item.fat.toFixed(1)     : item.fat),
+        meal_type:      mealId,
+      })
+    }
+    setSaving(false)
+    onClose()
+  }
+
+  const handleManualAdd = async () => {
+    if (!selectedFood || Number(grams) <= 0) return
+    const g = Number(grams)
+    const ratio = g / 100
+    setSaving(true)
+    await addFoodEntry({
+      food_name:      selectedFood.name,
+      quantity_grams: g,
+      calories:       Math.round(selectedFood.kcal * ratio),
+      protein:        parseFloat((selectedFood.protein * ratio).toFixed(1)),
+      carbs:          parseFloat((selectedFood.carbs   * ratio).toFixed(1)),
+      fat:            parseFloat((selectedFood.fat     * ratio).toFixed(1)),
+      meal_type:      mealId,
+    })
+    setSaving(false)
+    onClose()
+  }
+
+  return (
+    <div className="p-3 bg-[#F8FAFC] border-t border-[#E2E8F0]">
+      {/* Tabs */}
+      <div className="flex bg-[#F1F5F9] rounded-xl p-1 mb-3">
+        {[['ai', '✨ Describir con IA'], ['search', '🔍 Buscar']].map(([m, lbl]) => (
+          <button key={m} onClick={() => setMode(m)}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              mode === m ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'
+            }`}
+          >{lbl}</button>
+        ))}
+      </div>
+
+      {mode === 'ai' ? (
+        <AIDescribe onAddAll={handleAIAdd} />
+      ) : (
+        <div className="space-y-3">
+          <div className="relative">
+            <input
+              value={query}
+              onChange={e => { setQuery(e.target.value); setSelectedFood(null) }}
+              placeholder="Buscar alimento..."
+              autoFocus
+              className="w-full bg-white border border-[#E2E8F0] focus:border-[#16A34A] rounded-xl px-4 py-2.5 text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none"
+            />
+            {results.length > 0 && !selectedFood && (
+              <div className="absolute top-full left-0 right-0 z-20 mt-1 bg-white border border-[#E2E8F0] rounded-xl shadow-xl overflow-hidden">
+                {results.map(f => (
+                  <button key={f.name} onClick={() => { setSelectedFood(f); setQuery(f.name) }}
+                    className="w-full text-left px-4 py-2.5 hover:bg-[#F8FAFC] transition-colors flex justify-between items-center"
+                  >
+                    <span className="text-sm text-[#0F172A]">{f.name}</span>
+                    <span className="text-xs text-[#94A3B8]">{f.kcal} kcal/100g</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {selectedFood && (
+            <div className="space-y-2">
+              <div className="bg-[#16A34A]/10 border border-[#16A34A]/20 rounded-xl p-3 flex justify-between items-center">
+                <span className="text-sm font-medium text-[#0F172A]">{selectedFood.name}</span>
+                <span className="text-sm font-bold text-[#16A34A]">
+                  {Math.round(selectedFood.kcal * Number(grams) / 100)} kcal
+                </span>
+              </div>
+              <input
+                type="number"
+                value={grams}
+                onChange={e => setGrams(e.target.value)}
+                className="w-full bg-white border border-[#E2E8F0] rounded-xl px-3 py-2 text-sm text-center font-semibold text-[#0F172A] focus:outline-none focus:border-[#16A34A]"
+              />
+              <p className="text-xs text-center text-[#94A3B8]">gramos</p>
+              <div className="flex gap-2 text-xs text-[#64748B] justify-center">
+                <span>P: {(selectedFood.protein * Number(grams) / 100).toFixed(1)}g</span>
+                <span>·</span>
+                <span>C: {(selectedFood.carbs * Number(grams) / 100).toFixed(1)}g</span>
+                <span>·</span>
+                <span>G: {(selectedFood.fat * Number(grams) / 100).toFixed(1)}g</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {mode === 'search' && (
+        <div className="flex gap-2 mt-3">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl bg-[#E2E8F0] text-sm text-[#64748B] transition-colors">Cancelar</button>
+          <button
+            onClick={handleManualAdd}
+            disabled={!selectedFood || saving}
+            className="flex-1 py-2.5 rounded-xl bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-semibold disabled:opacity-50 transition-colors"
+          >
+            {saving ? '...' : 'Añadir ✓'}
+          </button>
+        </div>
+      )}
+      {mode === 'ai' && (
+        <button onClick={onClose} className="w-full mt-2 py-2 text-xs text-[#94A3B8] hover:text-[#64748B] transition-colors">Cancelar</button>
+      )}
+    </div>
+  )
+}
+
 // ─── Tab: Tracker ─────────────────────────────────────────────────────────────
 function TrackerTab({ user, plan, userData }) {
   const date = useMemo(() => new Date().toISOString().split('T')[0], [])
@@ -220,13 +515,10 @@ function TrackerTab({ user, plan, userData }) {
   // Meal state
   const [expandedMeals, setExpandedMeals] = useState({ breakfast: true })
   const [addingToMeal, setAddingToMeal] = useState(null)
-  const [search, setSearch] = useState('')
-  const [selectedFood, setSelectedFood] = useState(null)
-  const [quantity, setQuantity] = useState(100)
-  const [savingFood, setSavingFood] = useState(false)
 
   // Workout state
   const [showWorkoutModal, setShowWorkoutModal] = useState(false)
+  const [workoutModalMode, setWorkoutModalMode] = useState('ai')
   const [newWorkout, setNewWorkout] = useState({ type: 'strength', duration: 60, notes: '' })
   const [savingWorkout, setSavingWorkout] = useState(false)
 
@@ -247,10 +539,6 @@ function TrackerTab({ user, plan, userData }) {
   const totalBurned = workoutEntries.reduce((s, w) => s + (w.calories_burned || 0), 0)
   const netBalance = (plan?.daily_calories || 0) - totalKcal + totalBurned
 
-  const filtered = search.length > 1
-    ? FOOD_DB.filter(f => f.name.toLowerCase().includes(search.toLowerCase())).slice(0, 6)
-    : []
-
   const getMealFoods = (mealId) => foodEntries.filter(f => f.meal_type === mealId)
 
   const handleCheckin = async () => {
@@ -261,23 +549,6 @@ function TrackerTab({ user, plan, userData }) {
       sleepQuality: checkin.sleepQuality,
     })
     setSavingCheckin(false)
-  }
-
-  const handleAddFood = async (mealId) => {
-    if (!selectedFood) return
-    const ratio = quantity / 100
-    setSavingFood(true)
-    await addFoodEntry({
-      food_name: selectedFood.name,
-      quantity_grams: quantity,
-      calories: Math.round(selectedFood.kcal * ratio),
-      protein: parseFloat((selectedFood.protein * ratio).toFixed(1)),
-      carbs: parseFloat((selectedFood.carbs * ratio).toFixed(1)),
-      fat: parseFloat((selectedFood.fat * ratio).toFixed(1)),
-      meal_type: mealId,
-    })
-    setSearch(''); setSelectedFood(null); setQuantity(100); setAddingToMeal(null)
-    setSavingFood(false)
   }
 
   const handleAddWorkout = async () => {
@@ -500,72 +771,11 @@ function TrackerTab({ user, plan, userData }) {
                       <span className="text-lg leading-none">+</span> Añadir alimento
                     </button>
                   ) : (
-                    <div className="p-4 space-y-3 bg-[#F8FAFC]">
-                      <div className="relative">
-                        <input
-                          value={search}
-                          onChange={e => { setSearch(e.target.value); setSelectedFood(null) }}
-                          placeholder="Buscar alimento..."
-                          autoFocus
-                          className="w-full bg-white border border-[#E2E8F0] focus:border-[#16A34A] rounded-xl px-4 py-2.5 text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none"
-                        />
-                        {filtered.length > 0 && !selectedFood && (
-                          <div className="absolute top-full left-0 right-0 z-20 mt-1 bg-white border border-[#E2E8F0] rounded-xl shadow-xl overflow-hidden">
-                            {filtered.map(f => (
-                              <button
-                                key={f.name}
-                                onClick={() => { setSelectedFood(f); setSearch(f.name) }}
-                                className="w-full text-left px-4 py-2.5 hover:bg-[#F8FAFC] transition-colors flex justify-between items-center"
-                              >
-                                <span className="text-sm text-[#0F172A]">{f.name}</span>
-                                <span className="text-xs text-[#94A3B8]">{f.kcal} kcal/100g</span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {selectedFood && (
-                        <div className="space-y-2">
-                          <div className="bg-[#16A34A]/10 border border-[#16A34A]/20 rounded-xl p-3 flex justify-between items-center">
-                            <span className="text-sm font-medium text-[#0F172A]">{selectedFood.name}</span>
-                            <span className="text-sm font-bold text-[#16A34A]">
-                              {Math.round(selectedFood.kcal * quantity / 100)} kcal
-                            </span>
-                          </div>
-                          <div>
-                            <input
-                              type="number"
-                              value={quantity}
-                              onChange={e => setQuantity(Number(e.target.value))}
-                              className="w-full bg-white border border-[#E2E8F0] rounded-xl px-3 py-2 text-sm text-center font-semibold text-[#0F172A] focus:outline-none focus:border-[#16A34A]"
-                            />
-                            <p className="text-xs text-center text-[#94A3B8] mt-1">gramos</p>
-                          </div>
-                          <div className="flex gap-2 text-xs text-[#64748B] justify-center">
-                            <span>P: {(selectedFood.protein * quantity / 100).toFixed(1)}g</span>
-                            <span>·</span>
-                            <span>C: {(selectedFood.carbs * quantity / 100).toFixed(1)}g</span>
-                            <span>·</span>
-                            <span>G: {(selectedFood.fat * quantity / 100).toFixed(1)}g</span>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => { setAddingToMeal(null); setSearch(''); setSelectedFood(null); setQuantity(100) }}
-                          className="flex-1 py-2.5 rounded-xl bg-[#E2E8F0] text-sm text-[#64748B] hover:text-[#0F172A] transition-colors"
-                        >Cancelar</button>
-                        <button
-                          onClick={() => handleAddFood(meal.id)}
-                          disabled={!selectedFood || savingFood}
-                          className="flex-1 py-2.5 rounded-xl bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-semibold disabled:opacity-50 transition-colors"
-                        >
-                          {savingFood ? '...' : 'Añadir ✓'}
-                        </button>
-                      </div>
-                    </div>
+                    <MealInputPro
+                      mealId={meal.id}
+                      addFoodEntry={addFoodEntry}
+                      onClose={() => setAddingToMeal(null)}
+                    />
                   )}
                 </div>
               )}
@@ -737,53 +947,86 @@ function TrackerTab({ user, plan, userData }) {
 
       {/* Modal de entrenamiento */}
       {showWorkoutModal && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-end md:items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md space-y-4">
-            <h3 className="font-semibold text-[#0F172A]">Registrar entrenamiento</h3>
-
-            <div>
-              <label className="text-xs text-[#64748B] mb-1.5 block">Tipo de actividad</label>
-              <select
-                value={newWorkout.type}
-                onChange={e => setNewWorkout(w => ({ ...w, type: e.target.value }))}
-                className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl px-3 py-2.5 text-sm text-[#0F172A] focus:outline-none"
-              >
-                {Object.entries(WORKOUT_TYPE_LABELS).map(([v, l]) => (
-                  <option key={v} value={v}>{l}</option>
-                ))}
-              </select>
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-end md:items-center justify-center p-4" onClick={() => setShowWorkoutModal(false)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-[#0F172A]">Registrar entrenamiento</h3>
+              <button onClick={() => setShowWorkoutModal(false)} className="text-[#94A3B8] hover:text-[#0F172A] text-2xl leading-none">✕</button>
             </div>
 
-            <div>
-              <label className="text-xs text-[#64748B] mb-1.5 block">Duración (minutos)</label>
-              <input
-                type="number"
-                value={newWorkout.duration}
-                onChange={e => setNewWorkout(w => ({ ...w, duration: Number(e.target.value) }))}
-                className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl px-3 py-2.5 text-sm text-[#0F172A] focus:outline-none"
+            {/* Tabs IA / Manual */}
+            <div className="flex bg-[#F1F5F9] rounded-xl p-1">
+              {[['ai', '✨ Describir con IA'], ['manual', '⚙️ Manual']].map(([m, lbl]) => (
+                <button key={m} onClick={() => setWorkoutModalMode(m)}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    workoutModalMode === m ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'
+                  }`}
+                >{lbl}</button>
+              ))}
+            </div>
+
+            {workoutModalMode === 'ai' ? (
+              <AIActivity
+                userWeight={userData?.current_weight || 75}
+                onAddAll={async (activities) => {
+                  for (const act of activities) {
+                    await addWorkoutEntry({
+                      workout_type:      act.name,
+                      duration_minutes:  act.duration_minutes,
+                      calories_burned:   act.calories_burned,
+                      notes:             act.notes || null,
+                    })
+                  }
+                  setShowWorkoutModal(false)
+                }}
               />
-            </div>
+            ) : (
+              <>
+                <div>
+                  <label className="text-xs text-[#64748B] mb-1.5 block">Tipo de actividad</label>
+                  <select
+                    value={newWorkout.type}
+                    onChange={e => setNewWorkout(w => ({ ...w, type: e.target.value }))}
+                    className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl px-3 py-2.5 text-sm text-[#0F172A] focus:outline-none"
+                  >
+                    {Object.entries(WORKOUT_TYPE_LABELS).map(([v, l]) => (
+                      <option key={v} value={v}>{l}</option>
+                    ))}
+                  </select>
+                </div>
 
-            <div className="bg-[#F8FAFC] rounded-xl p-3 text-center">
-              <span className="text-[#64748B] text-sm">Estimación: </span>
-              <span className="text-[#16A34A] font-bold">
-                {estimateCaloriesBurned(newWorkout.type, newWorkout.duration, userData?.current_weight || 75)} kcal quemadas
-              </span>
-            </div>
+                <div>
+                  <label className="text-xs text-[#64748B] mb-1.5 block">Duración (minutos)</label>
+                  <input
+                    type="number"
+                    value={newWorkout.duration}
+                    onChange={e => setNewWorkout(w => ({ ...w, duration: Number(e.target.value) }))}
+                    className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl px-3 py-2.5 text-sm text-[#0F172A] focus:outline-none"
+                  />
+                </div>
 
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowWorkoutModal(false)}
-                className="flex-1 py-3 rounded-xl bg-[#E2E8F0] text-sm text-[#64748B] hover:text-[#0F172A] transition-colors"
-              >Cancelar</button>
-              <button
-                onClick={handleAddWorkout}
-                disabled={savingWorkout}
-                className="flex-1 py-3 rounded-xl bg-[#16A34A] hover:bg-[#15803D] text-white font-semibold text-sm transition-colors disabled:opacity-50"
-              >
-                {savingWorkout ? 'Guardando...' : 'Registrar ✓'}
-              </button>
-            </div>
+                <div className="bg-[#F8FAFC] rounded-xl p-3 text-center">
+                  <span className="text-[#64748B] text-sm">Estimación: </span>
+                  <span className="text-[#16A34A] font-bold">
+                    {estimateCaloriesBurned(newWorkout.type, newWorkout.duration, userData?.current_weight || 75)} kcal quemadas
+                  </span>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowWorkoutModal(false)}
+                    className="flex-1 py-3 rounded-xl bg-[#E2E8F0] text-sm text-[#64748B] hover:text-[#0F172A] transition-colors"
+                  >Cancelar</button>
+                  <button
+                    onClick={handleAddWorkout}
+                    disabled={savingWorkout}
+                    className="flex-1 py-3 rounded-xl bg-[#16A34A] hover:bg-[#15803D] text-white font-semibold text-sm transition-colors disabled:opacity-50"
+                  >
+                    {savingWorkout ? 'Guardando...' : 'Registrar ✓'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
