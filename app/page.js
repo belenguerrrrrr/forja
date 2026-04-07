@@ -470,25 +470,15 @@ export default function LandingPage() {
   const router = useRouter()
   const handleCTA = () => router.push('/onboarding')
 
-  // Detecta tokens de Supabase en el hash de la URL (magic link, recovery, etc.)
+  // Procesa tokens de Supabase en el hash de la URL (magic link)
   useEffect(() => {
     if (typeof window === 'undefined') return
+    if (!window.location.hash.includes('access_token')) return
 
-    const hash = window.location.hash
-
-    if (hash.includes('type=recovery')) {
-      router.push('/auth/reset-password')
-      return
-    }
-
-    if (hash.includes('access_token')) {
-      const supabase = createClient()
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-          window.location.href = '/dashboard'
-        }
-      })
-    }
+    const supabase = createClient()
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) window.location.href = '/dashboard'
+    })
   }, [])
 
   return (
