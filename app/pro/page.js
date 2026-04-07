@@ -368,7 +368,7 @@ function AIActivity({ onAddAll, userWeight }) {
 }
 
 // ─── MealInputPro (tabs IA + Buscar para el tracker Pro) ─────────────────────
-function MealInputPro({ mealId, addFoodEntry, onClose }) {
+function MealInputPro({ mealId, addFoodEntry, addFoodEntries, onClose }) {
   const [mode, setMode]           = useState('ai')
   const [query, setQuery]         = useState('')
   const [selectedFood, setSelectedFood] = useState(null)
@@ -381,17 +381,15 @@ function MealInputPro({ mealId, addFoodEntry, onClose }) {
 
   const handleAIAdd = async (items) => {
     setSaving(true)
-    for (const item of items) {
-      await addFoodEntry({
-        food_name:      item.name,
-        quantity_grams: item.grams,
-        calories:       Math.round(item.calories),
-        protein:        parseFloat(item.protein.toFixed ? item.protein.toFixed(1) : item.protein),
-        carbs:          parseFloat(item.carbs.toFixed   ? item.carbs.toFixed(1)   : item.carbs),
-        fat:            parseFloat(item.fat.toFixed     ? item.fat.toFixed(1)     : item.fat),
-        meal_type:      mealId,
-      })
-    }
+    await addFoodEntries(items.map(item => ({
+      food_name:      item.name,
+      quantity_grams: item.grams,
+      calories:       Math.round(item.calories),
+      protein:        parseFloat((+item.protein).toFixed(1)),
+      carbs:          parseFloat((+item.carbs).toFixed(1)),
+      fat:            parseFloat((+item.fat).toFixed(1)),
+      meal_type:      mealId,
+    })))
     setSaving(false)
     onClose()
   }
@@ -499,14 +497,32 @@ function MealInputPro({ mealId, addFoodEntry, onClose }) {
   )
 }
 
+function localToday() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+function offsetDate(base, days) {
+  const d = new Date(base + 'T12:00:00')
+  d.setDate(d.getDate() + days)
+  return d.toISOString().split('T')[0]
+}
+function formatDateShort(dateStr) {
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('es-ES', {
+    weekday: 'short', day: 'numeric', month: 'short',
+  })
+}
+
 // ─── Tab: Tracker ─────────────────────────────────────────────────────────────
 function TrackerTab({ user, plan, userData }) {
-  const date = useMemo(() => new Date().toISOString().split('T')[0], [])
+  const today = localToday()
+  const [viewDate, setViewDate] = useState(today)
+  const isToday = viewDate === today
+
   const {
     log, foodEntries, workoutEntries, loading,
-    morningCheckin, addFoodEntry, removeFoodEntry,
+    morningCheckin, addFoodEntry, addFoodEntries, removeFoodEntry,
     addWorkoutEntry, removeWorkoutEntry,
-  } = useTracker(user?.id, date)
+  } = useTracker(user?.id, viewDate)
 
   // Check-in state
   const [checkin, setCheckin] = useState({ weight: '', sleepHours: 7.5, sleepQuality: 3 })
@@ -607,6 +623,40 @@ function TrackerTab({ user, plan, userData }) {
 
   return (
     <div className="space-y-4 pb-8">
+
+      {/* ── Navegación de fechas ──────────────────────────────── */}
+      <div className="flex items-center justify-between bg-white border border-[#E2E8F0] rounded-xl px-4 py-3">
+        <button
+          onClick={() => setViewDate(d => offsetDate(d, -1))}
+          className="w-9 h-9 flex items-center justify-center rounded-xl text-[#94A3B8] hover:bg-[#F1F5F9] hover:text-[#0F172A] transition-colors text-lg"
+        >‹</button>
+
+        <button
+          onClick={() => !isToday && setViewDate(today)}
+          className={`flex-1 text-center text-sm font-semibold transition-all mx-2 py-1 rounded-xl ${
+            isToday ? 'text-[#16A34A]' : 'text-[#0F172A] hover:bg-[#F1F5F9]'
+          }`}
+        >
+          <span className="capitalize">{formatDateShort(viewDate)}</span>
+          {!isToday && <span className="text-[#94A3B8] font-normal ml-2 text-xs">· hoy →</span>}
+        </button>
+
+        <button
+          onClick={() => setViewDate(d => offsetDate(d, +1))}
+          disabled={isToday}
+          className={`w-9 h-9 flex items-center justify-center rounded-xl text-lg transition-colors ${
+            isToday ? 'text-[#E2E8F0] cursor-not-allowed' : 'text-[#94A3B8] hover:bg-[#F1F5F9] hover:text-[#0F172A]'
+          }`}
+        >›</button>
+      </div>
+
+      {/* Banner día pasado */}
+      {!isToday && (
+        <div className="bg-[#FFF7ED] border border-[#FED7AA] rounded-xl px-4 py-3 text-sm text-[#92400E] flex items-center gap-2">
+          <span>📅</span>
+          <span>Estás viendo un día pasado. Solo lectura para las entradas antiguas.</span>
+        </div>
+      )}
 
       {/* ── Sección 1: Check-in matutino ─────────────────────── */}
       {!checkinDone ? (
@@ -774,6 +824,7 @@ function TrackerTab({ user, plan, userData }) {
                     <MealInputPro
                       mealId={meal.id}
                       addFoodEntry={addFoodEntry}
+                      addFoodEntries={addFoodEntries}
                       onClose={() => setAddingToMeal(null)}
                     />
                   )}

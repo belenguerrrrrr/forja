@@ -58,6 +58,21 @@ export function useTracker(userId, date = new Date().toISOString().split('T')[0]
     return { data, error }
   }
 
+  // Insertar varios alimentos de golpe (evita stale closure al añadir desde IA)
+  const addFoodEntries = async (entries) => {
+    const { data, error } = await supabase
+      .from('food_entries')
+      .insert(entries.map(e => ({ ...e, user_id: userId, log_date: date })))
+      .select()
+
+    if (!error && data) {
+      const updated = [...foodEntries, ...data]
+      setFoodEntries(updated)
+      await recalculateFoodTotals(updated)
+    }
+    return { data, error }
+  }
+
   const removeFoodEntry = async (id) => {
     const { error } = await supabase
       .from('food_entries')
@@ -155,6 +170,7 @@ export function useTracker(userId, date = new Date().toISOString().split('T')[0]
     loading,
     morningCheckin,
     addFoodEntry,
+    addFoodEntries,
     removeFoodEntry,
     addWorkoutEntry,
     removeWorkoutEntry,
