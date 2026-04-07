@@ -2,6 +2,13 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 
 export async function middleware(request) {
+  const pathname = request.nextUrl.pathname
+
+  // Solo actuar en rutas protegidas
+  if (!pathname.startsWith('/pro') && !pathname.startsWith('/dashboard')) {
+    return NextResponse.next()
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -25,32 +32,38 @@ export async function middleware(request) {
     }
   )
 
-  // IMPORTANTE: getUser() refresca la sesión automáticamente y propaga cookies
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error } = await supabase.auth.getUser()
 
-  const { pathname } = request.nextUrl
+  console.log('MIDDLEWARE DEBUG:', {
+    pathname,
+    hasUser: !!user,
+    userId: user?.id,
+    error: error?.message,
+    cookieCount: request.cookies.getAll().length,
+  })
 
-  // Rutas que requieren autenticación
-  const isProtectedRoute =
-    pathname.startsWith('/pro') ||
-    pathname.startsWith('/dashboard')
-
-  if (isProtectedRoute && !user) {
-    const redirectUrl = new URL('/auth', request.url)
-    redirectUrl.searchParams.set('next', pathname)
-    return NextResponse.redirect(redirectUrl)
+  if (!user) {
+    console.log('MIDDLEWARE: No user, redirecting to /auth')
+    return NextResponse.redirect(new URL('/auth', request.url))
   }
 
-  // /pro requiere plan Pro activo
-  if (pathname.startsWith('/pro') && user) {
-    const { data: profile } = await supabase
+  if (pathname.startsWith('/pro')) {
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('plan, subscription_status')
       .eq('id', user.id)
       .single()
 
+    console.log('MIDDLEWARE PROFILE:', {
+      plan: profile?.plan,
+      status: profile?.subscription_status,
+      profileError: profileError?.message,
+    })
+
     const isPro = ['pro_monthly', 'pro_annual', 'lifetime'].includes(profile?.plan)
+
     if (!isPro) {
+      console.log('MIDDLEWARE: Not pro, redirecting to dashboard')
       return NextResponse.redirect(new URL('/dashboard?upgrade=true', request.url))
     }
   }
@@ -59,7 +72,5 @@ export async function middleware(request) {
 }
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|api/|auth/callback).*)',
-  ],
+  matcher: ['/pro/:path*', '/dashboard/:path*'],
 }
