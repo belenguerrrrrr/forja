@@ -1114,24 +1114,32 @@ function ProContent() {
 
   useEffect(() => {
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      setUser(user)
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+          router.replace('/auth')
+          return
+        }
+        setUser(user)
 
-      const thirtyDaysAgo = new Date()
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-      const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0]
+        const thirtyDaysAgo = new Date()
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+        const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0]
 
-      const [{ data: planData }, { data: ud }, { data: logsData }] = await Promise.all([
-        supabase.from('plans').select('*').eq('user_id', user.id).eq('is_active', true).order('created_at', { ascending: false }).limit(1).single(),
-        supabase.from('user_data').select('*').eq('user_id', user.id).single(),
-        supabase.from('daily_logs').select('*').eq('user_id', user.id).gte('log_date', thirtyDaysAgoStr).order('log_date', { ascending: true }),
-      ])
+        const [{ data: planData }, { data: ud }, { data: logsData }] = await Promise.all([
+          supabase.from('plans').select('*').eq('user_id', user.id).eq('is_active', true).order('created_at', { ascending: false }).limit(1).single(),
+          supabase.from('user_data').select('*').eq('user_id', user.id).single(),
+          supabase.from('daily_logs').select('*').eq('user_id', user.id).gte('log_date', thirtyDaysAgoStr).order('log_date', { ascending: true }),
+        ])
 
-      setPlan(planData)
-      setUserData(ud)
-      setLogs(logsData || [])
-      setLoading(false)
+        setPlan(planData)
+        setUserData(ud)
+        setLogs(logsData || [])
+      } catch (error) {
+        console.error('Error loading pro dashboard:', error)
+      } finally {
+        setLoading(false)
+      }
     }
     init()
   }, [])
@@ -1150,6 +1158,34 @@ function ProContent() {
         <div className="text-center">
           <div className="w-12 h-12 border-2 border-t-[#16A34A] border-[#E2E8F0] rounded-full animate-spin mx-auto mb-4" />
           <div className="font-display text-xl text-[#16A34A] tracking-widest" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>FORJA</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!plan) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-6">
+        <div className="text-center max-w-sm">
+          <div className="text-5xl mb-4">📋</div>
+          <h2 className="text-2xl font-bold text-[#0F172A] mb-3" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em' }}>
+            NO TIENES UN PLAN AÚN
+          </h2>
+          <p className="text-[#64748B] mb-8 leading-relaxed">
+            Completa el diagnóstico inicial para que la IA genere tu plan personalizado de entrenamiento y nutrición.
+          </p>
+          <button
+            onClick={() => router.push('/onboarding')}
+            className="bg-[#16A34A] hover:bg-[#15803D] text-white font-semibold px-8 py-4 rounded-xl transition-colors"
+          >
+            Generar mi plan →
+          </button>
+          <button
+            onClick={async () => { await supabase.auth.signOut(); router.push('/') }}
+            className="block mx-auto mt-4 text-sm text-[#64748B] hover:text-[#0F172A] transition-colors"
+          >
+            Cerrar sesión
+          </button>
         </div>
       </div>
     )
