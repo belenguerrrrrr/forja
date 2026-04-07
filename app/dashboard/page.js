@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useUser } from '@/hooks/useUser'
 import { usePlan } from '@/hooks/usePlan'
+import BottomNav from '@/components/shared/BottomNav'
 
 function DashboardContent() {
   const router = useRouter()
@@ -88,15 +89,17 @@ function DashboardContent() {
               <h3 className="font-display text-3xl text-forja-primary mb-2">HAZTE PRO</h3>
               <p className="text-forja-muted mb-6">Tracking diario, AI Coach, ajuste automático del plan y más.</p>
               <button
-                onClick={() => router.push('/#pricing')}
+                onClick={() => router.push('/#precios')}
                 className="bg-forja-primary hover:bg-forja-secondary text-white font-semibold px-8 py-3 rounded-xl transition-colors"
               >
-                Ver planes desde 9,99€/mes →
+                Ver planes desde 14,99€/mes →
               </button>
             </div>
           </div>
         )}
+        <div className="pb-24" />
       </div>
+      <BottomNav />
     </div>
   )
 }

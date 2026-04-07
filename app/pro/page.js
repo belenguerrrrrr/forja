@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { DAYS_ES, GOALS_ES, estimateCaloriesBurned } from '@/lib/utils'
 import { useTracker } from '@/hooks/useTracker'
 import { FOOD_DB } from '@/lib/foodDB'
+import BottomNav from '@/components/shared/BottomNav'
 
 const MEALS = [
   { id: 'breakfast', label: 'Desayuno', emoji: '🌅' },
@@ -1223,13 +1224,14 @@ function ProContent() {
       </div>
 
       {/* Contenido */}
-      <div className="max-w-2xl mx-auto px-4 py-6">
+      <div className="max-w-2xl mx-auto px-4 py-6 pb-24">
         {activeTab === 'dashboard' && <DashboardTab plan={plan} userData={userData} logs={logs} setActiveTab={setActiveTab} />}
         {activeTab === 'tracker' && <TrackerTab user={user} plan={plan} userData={userData} />}
         {activeTab === 'plan' && <PlanTab plan={plan} />}
         {activeTab === 'coach' && <CoachTab user={user} />}
         {activeTab === 'lab' && <LabTab plan={plan} userData={userData} />}
       </div>
+      <BottomNav isPro />
     </div>
   )
 }
