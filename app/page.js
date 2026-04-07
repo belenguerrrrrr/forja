@@ -487,15 +487,21 @@ export default function LandingPage() {
   const router = useRouter()
   const handleCTA = () => router.push('/onboarding')
 
-  // Procesa tokens de Supabase en el hash de la URL (magic link)
+  // Procesa tokens de Supabase en el hash de la URL (magic link via hash fragment)
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (!window.location.hash.includes('access_token')) return
 
     const supabase = createClient()
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) window.location.href = '/dashboard'
-    })
+    // Pequeño delay para que Supabase procese el hash y establezca la sesión
+    setTimeout(() => {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          // Limpiar el hash y redirigir con hard redirect para que el middleware recoja las cookies
+          window.location.href = '/dashboard'
+        }
+      })
+    }, 500)
   }, [])
 
   return (

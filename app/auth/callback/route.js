@@ -10,16 +10,24 @@ export async function GET(request) {
   const next       = searchParams.get('next') ?? '/dashboard'
 
   const cookieStore = cookies()
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
       cookies: {
-        getAll() { return cookieStore.getAll() },
+        getAll() {
+          return cookieStore.getAll()
+        },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          )
+          cookiesToSet.forEach(({ name, value, options }) => {
+            try {
+              cookieStore.set(name, value, options)
+            } catch {
+              // En ciertos contextos de Next.js 14 App Router el set puede fallar;
+              // el middleware se encarga de refrescar las cookies igualmente.
+            }
+          })
         },
       },
     }
@@ -27,13 +35,17 @@ export async function GET(request) {
 
   if (token_hash) {
     const { error } = await supabase.auth.verifyOtp({ token_hash, type })
-    if (!error) return NextResponse.redirect(`${origin}${next}`)
+    if (!error) {
+      return NextResponse.redirect(`${origin}${next}`)
+    }
     console.error('token_hash error:', error.message)
   }
 
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) return NextResponse.redirect(`${origin}${next}`)
+    if (!error) {
+      return NextResponse.redirect(`${origin}${next}`)
+    }
     console.error('code error:', error.message)
   }
 
