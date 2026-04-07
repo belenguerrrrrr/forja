@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
 // ─── Datos ────────────────────────────────────────────────────────────────────
 
@@ -469,13 +470,24 @@ export default function LandingPage() {
   const router = useRouter()
   const handleCTA = () => router.push('/onboarding')
 
-  // Detecta token de recovery de Supabase en el hash de la URL
+  // Detecta tokens de Supabase en el hash de la URL (magic link, recovery, etc.)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const hash = window.location.hash
-      if (hash.includes('type=recovery')) {
-        router.push('/auth/reset-password')
-      }
+    if (typeof window === 'undefined') return
+
+    const hash = window.location.hash
+
+    if (hash.includes('type=recovery')) {
+      router.push('/auth/reset-password')
+      return
+    }
+
+    if (hash.includes('access_token')) {
+      const supabase = createClient()
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          window.location.href = '/dashboard'
+        }
+      })
     }
   }, [])
 
