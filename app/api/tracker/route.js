@@ -1,12 +1,11 @@
-import { createClient } from '@/lib/supabase/server'
+import { getUserFromRequest } from '@/lib/supabase/fromToken'
 import { NextResponse } from 'next/server'
 
 // POST — guardar entrada de alimento o entrenamiento
 export async function POST(request) {
   try {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const { supabase, user, error: authError } = await getUserFromRequest(request)
+    if (authError) return authError
 
     const body = await request.json()
     const { type, date, ...data } = body
@@ -21,9 +20,7 @@ export async function POST(request) {
 
       if (error) throw error
 
-      // Recalcular totales del día
       await recalculateDayTotals(supabase, user.id, logDate)
-
       return NextResponse.json({ success: true, entry })
     }
 
@@ -64,13 +61,12 @@ export async function POST(request) {
 // GET — obtener log del día
 export async function GET(request) {
   try {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const { supabase, user, error: authError } = await getUserFromRequest(request)
+    if (authError) return authError
 
     const { searchParams } = new URL(request.url)
-    const date = searchParams.get('date') || new Date().toISOString().split('T')[0]
-    const range = searchParams.get('range') // 'week' | 'month'
+    const date  = searchParams.get('date')  || new Date().toISOString().split('T')[0]
+    const range = searchParams.get('range')
 
     if (range === 'week') {
       const weekAgo = new Date()
@@ -99,7 +95,7 @@ export async function GET(request) {
 
     return NextResponse.json({ log, foods: foods || [] })
 
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Error obteniendo datos' }, { status: 500 })
   }
 }
@@ -107,9 +103,8 @@ export async function GET(request) {
 // DELETE — eliminar entrada de alimento
 export async function DELETE(request) {
   try {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const { supabase, user, error: authError } = await getUserFromRequest(request)
+    if (authError) return authError
 
     const { id, date } = await request.json()
 
@@ -140,19 +135,19 @@ async function recalculateDayTotals(supabase, userId, date) {
   const totals = (entries || []).reduce(
     (acc, e) => ({
       calories: acc.calories + (e.calories || 0),
-      protein: acc.protein + (parseFloat(e.protein) || 0),
-      carbs: acc.carbs + (parseFloat(e.carbs) || 0),
-      fat: acc.fat + (parseFloat(e.fat) || 0),
+      protein:  acc.protein  + (parseFloat(e.protein) || 0),
+      carbs:    acc.carbs    + (parseFloat(e.carbs)   || 0),
+      fat:      acc.fat      + (parseFloat(e.fat)     || 0),
     }),
     { calories: 0, protein: 0, carbs: 0, fat: 0 }
   )
 
   await supabase.from('daily_logs').upsert({
-    user_id: userId,
-    log_date: date,
+    user_id:           userId,
+    log_date:          date,
     calories_consumed: totals.calories,
-    protein_consumed: totals.protein,
-    carbs_consumed: totals.carbs,
-    fat_consumed: totals.fat,
+    protein_consumed:  totals.protein,
+    carbs_consumed:    totals.carbs,
+    fat_consumed:      totals.fat,
   })
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
 // ─── Configuración de preguntas ───────────────────────────────────────────────
 
@@ -386,9 +387,16 @@ export default function OnboardingPage() {
 
       localStorage.setItem('forja_onboarding_data', JSON.stringify(userData))
 
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+
       const res = await fetch('/api/plan/preview', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(userData),
       })
       if (!res.ok) throw new Error('Error generando el plan')

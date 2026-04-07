@@ -1,15 +1,12 @@
-import { createClient } from '@/lib/supabase/server'
+import { getUserFromRequest } from '@/lib/supabase/fromToken'
 import { coachChat } from '@/lib/claude'
 import { NextResponse } from 'next/server'
 
+// POST — enviar mensaje al coach
 export async function POST(request) {
   try {
-    const supabase = createClient()
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
+    const { supabase, user, error: authError } = await getUserFromRequest(request)
+    if (authError) return authError
 
     // Verificar plan Pro
     const { data: profile } = await supabase
@@ -55,24 +52,24 @@ export async function POST(request) {
         .limit(7),
     ])
 
-    // Calcular métricas de contexto
-    const workoutsThisWeek = recentLogs?.filter(l => l.workout_done).length || 0
-    const logsWithData = recentLogs?.filter(l => l.calories_consumed > 0).length || 0
-    const adherence = recentLogs?.length ? Math.round((logsWithData / recentLogs.length) * 100) : 0
+    const workoutsThisWeek  = recentLogs?.filter(l => l.workout_done).length || 0
+    const logsWithData      = recentLogs?.filter(l => l.calories_consumed > 0).length || 0
+    const adherence         = recentLogs?.length
+      ? Math.round((logsWithData / recentLogs.length) * 100)
+      : 0
 
     const userContext = {
-      goal: userData?.goal,
-      current_weight: userData?.current_weight,
-      target_weight: userData?.target_weight,
-      daily_calories: plan?.daily_calories,
-      protein_grams: plan?.protein_grams,
-      carbs_grams: plan?.carbs_grams,
-      fat_grams: plan?.fat_grams,
-      workouts_this_week: workoutsThisWeek,
+      goal:                userData?.goal,
+      current_weight:      userData?.current_weight,
+      target_weight:       userData?.target_weight,
+      daily_calories:      plan?.daily_calories,
+      protein_grams:       plan?.protein_grams,
+      carbs_grams:         plan?.carbs_grams,
+      fat_grams:           plan?.fat_grams,
+      workouts_this_week:  workoutsThisWeek,
       last_week_adherence: adherence,
     }
 
-    // Llamar a Claude
     const response = await coachChat(messages, userContext)
 
     // Guardar respuesta del asistente
@@ -91,12 +88,10 @@ export async function POST(request) {
 }
 
 // GET — obtener historial de mensajes
-export async function GET() {
+export async function GET(request) {
   try {
-    const supabase = createClient()
-
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const { supabase, user, error: authError } = await getUserFromRequest(request)
+    if (authError) return authError
 
     const { data: messages } = await supabase
       .from('coach_messages')
