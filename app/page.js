@@ -108,13 +108,21 @@ const FAQS = [
 // ─── Componentes internos ─────────────────────────────────────────────────────
 
 function NavBar({ onCTA }) {
-  const [scrolled, setScrolled] = useState(false)
-  const router = useRouter()
+  const [scrolled, setScrolled]     = useState(false)
+  const [userEmail, setUserEmail]   = useState(null)
+  const router   = useRouter()
+  const supabase = createClient()
 
   useEffect(() => {
     const h = () => setScrolled(window.scrollY > 40)
     window.addEventListener('scroll', h)
     return () => window.removeEventListener('scroll', h)
+  }, [])
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setUserEmail(session.user.email)
+    })
   }, [])
 
   return (
@@ -139,12 +147,21 @@ function NavBar({ onCTA }) {
           <a href="#testimonios" className="hover:text-[#0F172A] transition-colors">Testimonios</a>
           <a href="/tracker" className="hover:text-[#0F172A] transition-colors font-medium text-[#16A34A]">Mi tracker</a>
         </div>
-        <button
-          onClick={onCTA}
-          className="bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
-        >
-          Crear mi plan gratis →
-        </button>
+        {userEmail ? (
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="bg-[#F0FDF4] border border-[#16A34A]/30 text-[#15803D] text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors hover:bg-[#DCFCE7] max-w-[200px] truncate"
+          >
+            👤 {userEmail}
+          </button>
+        ) : (
+          <button
+            onClick={onCTA}
+            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
+          >
+            Crear mi plan gratis →
+          </button>
+        )}
       </div>
     </nav>
   )

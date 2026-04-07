@@ -3,6 +3,38 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import BottomNav from '@/components/shared/BottomNav'
+import { createClient } from '@/lib/supabase/client'
+
+// ─── SessionBadge — indicador de sesión para debug ───────────────────────────
+function SessionBadge() {
+  const [session, setSession] = useState(undefined)
+  const supabase = createClient()
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => setSession(session))
+  }, [])
+
+  if (session === undefined) return null // aún cargando
+
+  if (!session) return (
+    <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-600 mb-4">
+      ⚠️ No hay sesión activa —{' '}
+      <a href="/auth" className="underline font-medium">Iniciar sesión</a>
+    </div>
+  )
+
+  return (
+    <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-2 text-sm text-green-700 mb-4 flex items-center justify-between">
+      <span>✓ Sesión activa: <strong>{session.user.email}</strong></span>
+      <button
+        onClick={async () => { await supabase.auth.signOut(); window.location.reload() }}
+        className="text-xs text-green-600 hover:underline ml-4"
+      >
+        Cerrar sesión
+      </button>
+    </div>
+  )
+}
 
 // ─── Alimentos (kcal / p / c / f por 100g) ───────────────────────────────────
 const FOODS = [
@@ -743,6 +775,8 @@ export default function TrackerPage() {
       )}
 
       <div className="max-w-lg mx-auto px-4 py-6 space-y-5">
+
+        <SessionBadge />
 
         {/* ── Hero: ring + macros ── */}
         <div className="bg-white rounded-3xl border border-[#E2E8F0] shadow-sm p-6">
