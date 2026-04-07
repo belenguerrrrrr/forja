@@ -469,6 +469,16 @@ export default function LandingPage() {
   const router = useRouter()
   const handleCTA = () => router.push('/onboarding')
 
+  // Detecta token de recovery de Supabase en el hash de la URL
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash
+      if (hash.includes('type=recovery')) {
+        router.push('/auth/reset-password')
+      }
+    }
+  }, [])
+
   return (
     <div
       className="min-h-screen bg-[#F8FAFC] text-[#0F172A] overflow-x-hidden"
