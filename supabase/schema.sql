@@ -156,7 +156,7 @@ CREATE TABLE IF NOT EXISTS public.food_entries (
   id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id         UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   log_date        DATE NOT NULL,
-  meal_type       TEXT NOT NULL DEFAULT 'lunch',  -- 'breakfast' | 'morning_snack' | 'lunch' | 'afternoon_snack' | 'dinner'
+  meal_type       TEXT NOT NULL DEFAULT 'lunch' CHECK (meal_type IN ('breakfast', 'morning_snack', 'lunch', 'afternoon_snack', 'dinner')),
   food_name       TEXT NOT NULL,
   quantity_grams  NUMERIC(6,1),
   calories        INTEGER NOT NULL,

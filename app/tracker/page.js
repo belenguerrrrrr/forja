@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import BottomNav from '@/components/shared/BottomNav'
 
 // ─── Alimentos (kcal / p / c / f por 100g) ───────────────────────────────────
 const FOODS = [
@@ -903,10 +904,11 @@ export default function TrackerPage() {
           )}
         </div>
 
-        <div className="pb-6" />
+        <div className="pb-24" />
       </div>
 
       <WorkoutModal show={showWorkout} onClose={() => setShowWorkout(false)} onAdd={addWorkout} userWeight={userWeight} />
+      <BottomNav />
     </div>
   )
 }

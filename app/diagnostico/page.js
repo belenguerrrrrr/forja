@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import BottomNav from '@/components/shared/BottomNav'
 
 const DAYS = [
   { key: 'monday',    short: 'L' },
@@ -297,8 +298,9 @@ export default function DiagnosticoPage() {
           <p className="text-[#475569] text-xs mt-3">Sin tarjeta de crédito · Siempre gratis para empezar</p>
         </div>
 
-        <div className="pb-4" />
+        <div className="pb-24" />
       </div>
+      <BottomNav />
     </div>
   )
 }

@@ -54,5 +54,6 @@ export async function GET(request) {
     console.error('code error:', error)
   }
 
-  return NextResponse.redirect(`${origin}/auth?error=callback`)
+  console.error('Auth callback failed: no valid token_hash or code found', { code: !!code, token_hash: !!token_hash, type })
+  return NextResponse.redirect(`${origin}/auth?error=expired`)
 }

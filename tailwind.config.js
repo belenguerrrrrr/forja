@@ -13,10 +13,12 @@ module.exports = {
           surface: '#FFFFFF',
           border: '#E2E8F0',
           primary: '#16A34A',
+          'primary-hover': '#15803D',
           secondary: '#22C55E',
           green: '#16A34A',
           text: '#0F172A',
           muted: '#64748B',
+          accent: '#F97316',
         },
       },
       fontFamily: {
