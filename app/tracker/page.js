@@ -621,6 +621,24 @@ export default function TrackerPage() {
     localStorage.setItem(`forja_tracker_${viewDateRef.current}`, JSON.stringify(data))
   }, [data, mounted])
 
+  // Detectar cambio de día (pestaña abierta de un día para otro)
+  useEffect(() => {
+    if (!mounted) return
+    const checkDate = () => {
+      const newToday = localToday()
+      // Solo auto-navegar si el usuario está viendo "hoy" (la fecha anterior)
+      if (viewDateRef.current !== newToday && viewDate === viewDateRef.current) {
+        goToDate(newToday)
+      }
+    }
+    document.addEventListener('visibilitychange', checkDate)
+    const timer = setInterval(checkDate, 60_000)
+    return () => {
+      document.removeEventListener('visibilitychange', checkDate)
+      clearInterval(timer)
+    }
+  }, [mounted]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Navegar a otra fecha
   const goToDate = (date) => {
     const today = localToday()
@@ -666,6 +684,10 @@ export default function TrackerPage() {
           {/* Volver al plan */}
           <button onClick={() => router.push('/diagnostico')} className="text-[#94A3B8] hover:text-[#0F172A] transition-colors text-sm px-1 flex-shrink-0">
             ←
+          </button>
+          {/* Evolución */}
+          <button onClick={() => router.push('/evolucion')} className="text-[#94A3B8] hover:text-[#0F172A] transition-colors text-sm px-1 flex-shrink-0" title="Ver evolución">
+            📈
           </button>
 
           {/* Navegación de fechas */}
