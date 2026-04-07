@@ -1123,7 +1123,7 @@ function ProContent() {
           .from('profiles')
           .select('plan')
           .eq('id', session.user.id)
-          .single()
+          .maybeSingle()
 
         const isPro = ['pro_monthly', 'pro_annual', 'lifetime'].includes(profile?.plan)
         if (!isPro) { router.push('/dashboard?upgrade=true'); return }
@@ -1136,8 +1136,8 @@ function ProContent() {
         const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0]
 
         const [{ data: planData }, { data: ud }, { data: logsData }] = await Promise.all([
-          supabase.from('plans').select('*').eq('user_id', user.id).eq('is_active', true).order('created_at', { ascending: false }).limit(1).single(),
-          supabase.from('user_data').select('*').eq('user_id', user.id).single(),
+          supabase.from('plans').select('*').eq('user_id', user.id).eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+          supabase.from('user_data').select('*').eq('user_id', user.id).maybeSingle(),
           supabase.from('daily_logs').select('*').eq('user_id', user.id).gte('log_date', thirtyDaysAgoStr).order('log_date', { ascending: true }),
         ])
 
