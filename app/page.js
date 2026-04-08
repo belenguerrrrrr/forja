@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { LogoNav } from '@/components/shared/Logo'
+import { LogoNav, LogoIcon } from '@/components/shared/Logo'
 
 // ─── Datos ────────────────────────────────────────────────────────────────────
 
@@ -108,6 +108,56 @@ const FAQS = [
 
 // ─── Componentes internos ─────────────────────────────────────────────────────
 
+function UserMenu({ email }) {
+  const [open, setOpen] = useState(false)
+  const router = useRouter()
+  const supabase = createClient()
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    window.location.reload()
+  }
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 bg-[#F1F5F9] hover:bg-[#E2E8F0] px-3 py-2 rounded-xl transition-colors"
+      >
+        <div className="w-7 h-7 rounded-full bg-[#16A34A] flex items-center justify-center text-white text-xs font-bold">
+          {email?.[0]?.toUpperCase()}
+        </div>
+        <span className="text-sm text-[#0F172A] hidden md:block max-w-[120px] truncate">{email}</span>
+        <span className="text-[#64748B] text-xs">▾</span>
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-2 bg-white border border-[#E2E8F0] rounded-xl shadow-lg py-1 min-w-[160px] z-50">
+          <button
+            onClick={() => router.push('/pro')}
+            className="w-full text-left px-4 py-2.5 text-sm text-[#0F172A] hover:bg-[#F8FAFC] transition-colors"
+          >
+            Mi dashboard →
+          </button>
+          <button
+            onClick={() => router.push('/tracker')}
+            className="w-full text-left px-4 py-2.5 text-sm text-[#0F172A] hover:bg-[#F8FAFC] transition-colors"
+          >
+            Mi tracker →
+          </button>
+          <div className="border-t border-[#E2E8F0] my-1"/>
+          <button
+            onClick={handleSignOut}
+            className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-[#FEF2F2] transition-colors"
+          >
+            Cerrar sesión
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function NavBar({ onCTA }) {
   const [scrolled, setScrolled]     = useState(false)
   const [userEmail, setUserEmail]   = useState(null)
@@ -145,12 +195,7 @@ function NavBar({ onCTA }) {
           <a href="/tracker" className="hover:text-[#0F172A] transition-colors font-medium text-[#16A34A]">Mi tracker</a>
         </div>
         {userEmail ? (
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="bg-[#F0FDF4] border border-[#16A34A]/30 text-[#15803D] text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors hover:bg-[#DCFCE7] max-w-[200px] truncate"
-          >
-            👤 {userEmail}
-          </button>
+          <UserMenu email={userEmail} />
         ) : (
           <button
             onClick={onCTA}
@@ -187,12 +232,7 @@ function DiagnosticoMockup() {
         <div className="flex items-center justify-between border-b border-[#F1F5F9] pb-3">
           <div>
             <div className="text-xs text-[#64748B] mb-0.5">Tu diagnóstico</div>
-            <div
-              className="text-lg text-[#16A34A]"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em' }}
-            >
-              FORJA
-            </div>
+            <LogoIcon size={28} />
           </div>
           <div className="text-right">
             <div className="text-xs text-[#64748B] mb-0.5">Puntuación de salud</div>
