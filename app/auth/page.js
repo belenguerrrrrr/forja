@@ -24,13 +24,15 @@ export default function AuthPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
+
+    const res = await fetch('/api/auth/magic-link', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
     })
-    if (error) setError(error.message)
+
+    const data = await res.json()
+    if (data.error) setError(data.error)
     else setSent(true)
     setLoading(false)
   }
