@@ -6,6 +6,7 @@ import { useUser } from '@/hooks/useUser'
 import { usePlan } from '@/hooks/usePlan'
 import { createClient } from '@/lib/supabase/client'
 import BottomNav from '@/components/shared/BottomNav'
+import { LogoIcon } from '@/components/shared/Logo'
 
 function DashboardContent() {
   const router = useRouter()
@@ -59,7 +60,7 @@ function DashboardContent() {
   if (user && (userLoading || planLoading)) {
     return (
       <div className="min-h-screen bg-forja-bg flex items-center justify-center">
-        <div className="text-forja-primary font-display text-2xl animate-pulse">FORJA</div>
+        <LogoIcon size={48} className="animate-pulse" />
       </div>
     )
   }

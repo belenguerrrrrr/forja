@@ -7,6 +7,7 @@ import { DAYS_ES, GOALS_ES, estimateCaloriesBurned } from '@/lib/utils'
 import { useTracker } from '@/hooks/useTracker'
 import { FOOD_DB } from '@/lib/foodDB'
 import BottomNav from '@/components/shared/BottomNav'
+import { LogoNav, LogoIcon } from '@/components/shared/Logo'
 
 const MEALS = [
   { id: 'breakfast', label: 'Desayuno', emoji: '🌅' },
@@ -1471,7 +1472,7 @@ function ProContent() {
       <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 border-2 border-t-[#16A34A] border-[#E2E8F0] rounded-full animate-spin mx-auto mb-4" />
-          <div className="font-display text-xl text-[#16A34A] tracking-widest" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>FORJA</div>
+          <LogoIcon size={36} />
         </div>
       </div>
     )
@@ -1511,7 +1512,7 @@ function ProContent() {
       <div className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-[#E2E8F0]">
         <div className="max-w-2xl mx-auto px-4">
           <div className="flex items-center justify-between h-14">
-            <span className="font-display text-2xl text-[#16A34A] tracking-widest" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>FORJA</span>
+            <LogoNav />
             <button
               onClick={async () => { await supabase.auth.signOut(); router.push('/') }}
               className="text-xs text-[#64748B] hover:text-[#0F172A] transition-colors"

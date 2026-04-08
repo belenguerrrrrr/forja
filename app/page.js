@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { LogoNav } from '@/components/shared/Logo'
 
 // ─── Datos ────────────────────────────────────────────────────────────────────
 
@@ -134,13 +135,9 @@ function NavBar({ onCTA }) {
       }`}
     >
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-        <span
-          className="text-3xl text-[#16A34A] tracking-widest cursor-pointer"
-          style={{ fontFamily: "'Bebas Neue', sans-serif" }}
-          onClick={() => router.push('/')}
-        >
-          FORJA
-        </span>
+        <div className="cursor-pointer" onClick={() => router.push('/')}>
+          <LogoNav />
+        </div>
         <div className="hidden md:flex items-center gap-8 text-sm text-[#64748B]">
           <a href="#como-funciona" className="hover:text-[#0F172A] transition-colors">Cómo funciona</a>
           <a href="#precios" className="hover:text-[#0F172A] transition-colors">Precios</a>
@@ -1187,12 +1184,7 @@ export default function LandingPage() {
       {/* ── SECCIÓN 11: FOOTER ───────────────────────────────────────────── */}
       <footer className="border-t border-[#E2E8F0] bg-white py-10 px-6">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <span
-            className="text-2xl text-[#16A34A] tracking-widest"
-            style={{ fontFamily: "'Bebas Neue', sans-serif" }}
-          >
-            FORJA
-          </span>
+          <LogoNav />
           <div className="flex flex-wrap justify-center gap-6 text-xs text-[#64748B]">
             <a href="/privacidad" className="hover:text-[#0F172A] transition-colors">Privacidad</a>
             <a href="/terminos" className="hover:text-[#0F172A] transition-colors">Términos</a>

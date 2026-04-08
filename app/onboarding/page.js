@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { LogoNav } from '@/components/shared/Logo'
 
 // ─── Configuración de preguntas ───────────────────────────────────────────────
 
@@ -453,7 +454,7 @@ export default function OnboardingPage() {
       <div className="px-6 pt-6 pb-4">
         <div className="max-w-xl mx-auto">
           <div className="flex items-center justify-between mb-6">
-            <span className="font-display text-2xl text-[#16A34A] tracking-widest" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>FORJA</span>
+            <LogoNav />
             {stepIndex > 0 && (
               <button onClick={goBack} className="text-[#64748B] text-sm hover:text-[#0F172A] transition-colors">
                 ← Atrás

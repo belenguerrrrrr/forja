@@ -4,6 +4,9 @@ export const metadata = {
   title: 'FORJA — Forja tu mejor versión',
   description: 'Coach de fitness con IA. Plan personalizado de entrenamiento y nutrición para alcanzar tu objetivo físico.',
   keywords: 'fitness, entrenamiento, nutrición, IA, coaching, perder peso, ganar músculo',
+  icons: {
+    icon: '/favicon.svg',
+  },
   openGraph: {
     title: 'FORJA — Forja tu mejor versión',
     description: 'Coach de fitness con IA. Plan personalizado de entrenamiento y nutrición.',

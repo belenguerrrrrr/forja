@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { LogoFull } from '@/components/shared/Logo'
 
 export default function AuthPage() {
   const [email, setEmail]   = useState('')
@@ -57,12 +58,7 @@ export default function AuthPage() {
     <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1
-            className="text-6xl text-[#16A34A] tracking-wider"
-            style={{ fontFamily: "'Bebas Neue', sans-serif" }}
-          >
-            FORJA
-          </h1>
+          <LogoFull className="justify-center" />
           <p className="text-[#64748B] mt-1 text-sm">Forja tu mejor versión</p>
         </div>
 

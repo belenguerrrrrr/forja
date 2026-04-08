@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import BottomNav from '@/components/shared/BottomNav'
+import { LogoNav } from '@/components/shared/Logo'
 
 const DAYS = [
   { key: 'monday',    short: 'L' },
@@ -191,7 +192,7 @@ export default function DiagnosticoPage() {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white border-b border-[#E2E8F0] px-4 py-3">
         <div className="max-w-lg mx-auto flex items-center justify-between">
-          <span className="text-xl text-[#16A34A] tracking-widest font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>FORJA</span>
+          <LogoNav />
           <span className="text-xs text-[#94A3B8] font-medium uppercase tracking-wider">Tu diagnóstico</span>
         </div>
       </div>
