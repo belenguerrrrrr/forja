@@ -481,7 +481,10 @@ export default function TrackerTab({ user, plan, userData, onGoToWorkout }) {
       const res  = await fetch('/api/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: viewDate }) })
       const data = await res.json()
       if (data.feedback) setAiFeedback(data.feedback)
-    } catch {}
+      else console.error('Feedback error:', data.error)
+    } catch (err) {
+      console.error('Feedback fetch error:', err)
+    }
     setLoadingFeedback(false)
   }
 

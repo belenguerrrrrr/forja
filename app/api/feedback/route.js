@@ -13,10 +13,10 @@ export async function POST(request) {
     const date = body.date || new Date().toISOString().split('T')[0]
 
     const [{ data: plan }, { data: userData }, { data: foods }, { data: log }] = await Promise.all([
-      supabase.from('plans').select('*').eq('user_id', user.id).eq('is_active', true).single(),
-      supabase.from('user_data').select('*').eq('user_id', user.id).single(),
+      supabase.from('plans').select('*').eq('user_id', user.id).eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+      supabase.from('user_data').select('*').eq('user_id', user.id).maybeSingle(),
       supabase.from('food_entries').select('calories, protein, carbs, fat').eq('user_id', user.id).eq('log_date', date),
-      supabase.from('daily_logs').select('*').eq('user_id', user.id).eq('log_date', date).single(),
+      supabase.from('daily_logs').select('*').eq('user_id', user.id).eq('log_date', date).maybeSingle(),
     ])
 
     const caloriesConsumed = (foods || []).reduce((s, f) => s + (f.calories || 0), 0)
@@ -45,8 +45,8 @@ export async function POST(request) {
     await supabase.from('daily_logs').upsert({
       user_id: user.id,
       log_date: date,
-      ai_feedback_realtime: JSON.stringify(feedback),
-    })
+      ai_feedback: JSON.stringify(feedback),
+    }, { onConflict: 'user_id,log_date' })
 
     return NextResponse.json({ feedback })
   } catch (error) {
