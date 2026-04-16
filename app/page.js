@@ -197,12 +197,20 @@ function NavBar({ onCTA }) {
         {userEmail ? (
           <UserMenu email={userEmail} />
         ) : (
-          <button
-            onClick={onCTA}
-            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
-          >
-            Crear mi plan gratis →
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => router.push('/auth')}
+              className="text-sm font-medium text-[#64748B] hover:text-[#0F172A] px-3 py-2.5 rounded-lg transition-colors"
+            >
+              Iniciar sesión
+            </button>
+            <button
+              onClick={onCTA}
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors hidden sm:block"
+            >
+              Crear mi plan gratis →
+            </button>
+          </div>
         )}
       </div>
     </nav>
