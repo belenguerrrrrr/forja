@@ -1,6 +1,14 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { createClient } from '@/lib/supabase/client'
+
+async function getAuthHeaders() {
+  const supabase = createClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.access_token) return {}
+  return { Authorization: `Bearer ${session.access_token}` }
+}
 
 export default function CoachTab({ user }) {
   const [messages, setMessages] = useState([])
@@ -9,15 +17,17 @@ export default function CoachTab({ user }) {
   const bottomRef = useRef(null)
 
   useEffect(() => {
-    fetch('/api/coach')
-      .then(r => r.json())
-      .then(d => {
-        if (d.messages?.length) setMessages(d.messages)
-        else setMessages([{
-          id: 'welcome', role: 'assistant',
-          content: '¡Hola! Soy tu FORJA Coach 🔥 Pregúntame lo que quieras sobre tu entrenamiento, nutrición, o cómo sacar el máximo partido a tu plan. Estoy aquí 24/7.',
-        }])
-      })
+    getAuthHeaders().then(headers =>
+      fetch('/api/coach', { headers })
+        .then(r => r.json())
+        .then(d => {
+          if (d.messages?.length) setMessages(d.messages)
+          else setMessages([{
+            id: 'welcome', role: 'assistant',
+            content: '¡Hola! Soy tu FORJA Coach 🔥 Pregúntame lo que quieras sobre tu entrenamiento, nutrición, o cómo sacar el máximo partido a tu plan. Estoy aquí 24/7.',
+          }])
+        })
+    )
   }, [])
 
   useEffect(() => {
@@ -30,12 +40,22 @@ export default function CoachTab({ user }) {
     setInput('')
     setMessages(prev => [...prev, { id: Date.now(), role: 'user', content: msg }])
     setSending(true)
-    const res  = await fetch('/api/coach', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: msg }),
-    })
-    const data = await res.json()
-    if (data.message) setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: data.message }])
+    try {
+      const headers = await getAuthHeaders()
+      const res  = await fetch('/api/coach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: JSON.stringify({ message: msg }),
+      })
+      const data = await res.json()
+      if (data.message) {
+        setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: data.message }])
+      } else {
+        setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: data.error || 'Error al responder. Inténtalo de nuevo.' }])
+      }
+    } catch {
+      setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: 'Error de conexión. Comprueba tu red e inténtalo de nuevo.' }])
+    }
     setSending(false)
   }
 
