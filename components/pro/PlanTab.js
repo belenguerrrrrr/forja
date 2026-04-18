@@ -21,6 +21,18 @@ const EQUIPMENT_TYPES = [
   { id: 'resistance_band', label: 'Banda' },
 ]
 
+const TRAINING_TYPES = [
+  { id: 'rest',     label: 'Descanso', emoji: '🛌' },
+  { id: 'strength', label: 'Fuerza',   emoji: '🏋️' },
+  { id: 'cardio',   label: 'Cardio',   emoji: '🏃' },
+  { id: 'hiit',     label: 'HIIT',     emoji: '⚡' },
+  { id: 'yoga',     label: 'Yoga',     emoji: '🧘' },
+  { id: 'cycling',  label: 'Ciclismo', emoji: '🚴' },
+  { id: 'other',    label: 'Otro',     emoji: '💪' },
+]
+
+const DAYS_ORDER = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday']
+
 const SESSION_COLORS = {
   strength: '#16A34A', running: '#3B82F6', hiit: '#F97316',
   cardio: '#3B82F6', rest: '#CBD5E1', yoga: '#A78BFA',
@@ -632,9 +644,292 @@ function ExerciseLibrarySub() {
   )
 }
 
+// ── Sub-tab 4: Editar plan ────────────────────────────────────────────────────
+function EditPlanSub({ plan, onPlanUpdate }) {
+  const [localPlan,   setLocalPlan]   = useState(() =>
+    plan?.training_plan ? JSON.parse(JSON.stringify(plan.training_plan)) : {}
+  )
+  const [expandedDay, setExpandedDay] = useState(null)
+  const [swappingDay, setSwappingDay] = useState(null)  // día origen del intercambio
+  const [saving,      setSaving]      = useState(false)
+  const [saved,       setSaved]       = useState(false)
+
+  useEffect(() => {
+    if (plan?.training_plan) setLocalPlan(JSON.parse(JSON.stringify(plan.training_plan)))
+  }, [plan?.id])
+
+  const markUnsaved = () => setSaved(false)
+
+  const updateDay = (day, field, value) => {
+    setLocalPlan(prev => ({ ...prev, [day]: { ...prev[day], [field]: value } }))
+    markUnsaved()
+  }
+
+  const setDayType = (day, type) => {
+    setLocalPlan(prev => ({
+      ...prev,
+      [day]: { ...prev[day], type, ...(type === 'rest' ? { exercises: [] } : {}) },
+    }))
+    markUnsaved()
+  }
+
+  const updateExercise = (day, exIdx, field, value) => {
+    setLocalPlan(prev => {
+      const exercises = [...(prev[day]?.exercises || [])]
+      exercises[exIdx] = { ...exercises[exIdx], [field]: value }
+      return { ...prev, [day]: { ...prev[day], exercises } }
+    })
+    markUnsaved()
+  }
+
+  const addExercise = (day) => {
+    setLocalPlan(prev => {
+      const exercises = [...(prev[day]?.exercises || []), { name: '', sets: 3, reps: '10', rest_seconds: 90, notes: '' }]
+      return { ...prev, [day]: { ...prev[day], exercises } }
+    })
+    markUnsaved()
+  }
+
+  const removeExercise = (day, exIdx) => {
+    setLocalPlan(prev => {
+      const exercises = (prev[day]?.exercises || []).filter((_, i) => i !== exIdx)
+      return { ...prev, [day]: { ...prev[day], exercises } }
+    })
+    markUnsaved()
+  }
+
+  const startSwap = (day) => {
+    setExpandedDay(null)
+    setSwappingDay(day)
+  }
+
+  const confirmSwap = (targetDay) => {
+    setLocalPlan(prev => {
+      const a = prev[swappingDay] ? { ...prev[swappingDay] } : { type: 'rest', exercises: [] }
+      const b = prev[targetDay]   ? { ...prev[targetDay] }   : { type: 'rest', exercises: [] }
+      return { ...prev, [swappingDay]: b, [targetDay]: a }
+    })
+    setSwappingDay(null)
+    markUnsaved()
+  }
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      const res  = await fetch('/api/plan', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ training_plan: localPlan }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        onPlanUpdate?.(data.plan)
+        setSaved(true)
+        setTimeout(() => setSaved(false), 3000)
+      }
+    } catch {}
+    setSaving(false)
+  }
+
+  if (!plan) {
+    return (
+      <div className="text-center py-16 space-y-3">
+        <div className="text-5xl">📋</div>
+        <h3 className="font-semibold text-[#0F172A]">Sin plan activo</h3>
+        <p className="text-sm text-[#64748B]">Genera tu plan primero desde el diagnóstico.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Banner modo intercambio */}
+      {swappingDay ? (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+          <p className="text-sm text-amber-800 font-medium">
+            Intercambiando <span className="font-bold">{DAYS_ES[swappingDay]}</span> — toca el día destino
+          </p>
+          <button onClick={() => setSwappingDay(null)}
+            className="text-xs text-amber-600 font-semibold bg-amber-100 px-2.5 py-1 rounded-lg shrink-0">
+            Cancelar
+          </button>
+        </div>
+      ) : (
+        <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl px-4 py-3 text-xs text-[#64748B]">
+          Edita cada día o usa <span className="font-semibold text-[#0F172A]">🔄 Intercambiar</span> para mover una sesión a otro día.
+        </div>
+      )}
+
+      {DAYS_ORDER.map(day => {
+        const dayData     = localPlan[day] || { type: 'rest', exercises: [] }
+        const isExpanded  = expandedDay === day
+        const isRest      = dayData.type === 'rest'
+        const typeInfo    = TRAINING_TYPES.find(t => t.id === dayData.type) || TRAINING_TYPES[0]
+        const isSwapOrigin = swappingDay === day
+        const isSwapTarget = swappingDay && swappingDay !== day
+
+        return (
+          <div key={day}
+            className={`bg-white rounded-xl overflow-hidden transition-all border-2 ${
+              isSwapOrigin ? 'border-amber-400 shadow-md' :
+              isSwapTarget ? 'border-[#16A34A]/50 hover:border-[#16A34A] cursor-pointer' :
+              'border-[#E2E8F0]'
+            }`}>
+
+            {/* Cabecera del día */}
+            <div className="flex items-center gap-2 px-3 py-3">
+              {/* Click en el bloque principal: si hay swap activo → intercambiar; si no → expandir */}
+              <button className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                onClick={() => swappingDay ? (swappingDay !== day && confirmSwap(day)) : setExpandedDay(isExpanded ? null : day)}>
+                <span className="text-xl shrink-0">{typeInfo.emoji}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-[#0F172A]">{DAYS_ES[day]}</div>
+                  <div className="text-xs text-[#64748B] truncate">
+                    {isRest ? 'Descanso' : `${dayData.name || typeInfo.label} · ${dayData.exercises?.length || 0} ejercicios · ${dayData.duration_minutes || 60} min`}
+                  </div>
+                </div>
+              </button>
+
+              {/* Botones de acción (solo visibles sin swap activo) */}
+              {!swappingDay && (
+                <>
+                  <button onClick={e => { e.stopPropagation(); startSwap(day) }}
+                    title="Intercambiar este día con otro"
+                    className="shrink-0 text-xs text-[#64748B] bg-[#F1F5F9] hover:bg-[#E2E8F0] px-2 py-1.5 rounded-lg font-medium transition-colors">
+                    🔄
+                  </button>
+                  <button onClick={() => setExpandedDay(isExpanded ? null : day)}
+                    className={`shrink-0 text-[#94A3B8] transition-transform inline-block w-6 text-center ${isExpanded ? 'rotate-180' : ''}`}>
+                    ▾
+                  </button>
+                </>
+              )}
+
+              {/* En modo swap: indicar si es el origen o el destino posible */}
+              {swappingDay && swappingDay !== day && (
+                <button onClick={() => confirmSwap(day)}
+                  className="shrink-0 text-xs text-[#16A34A] bg-[#16A34A]/10 hover:bg-[#16A34A]/20 px-2.5 py-1.5 rounded-lg font-semibold transition-colors">
+                  Intercambiar aquí
+                </button>
+              )}
+              {isSwapOrigin && (
+                <span className="shrink-0 text-xs text-amber-600 font-semibold px-2">origen</span>
+              )}
+            </div>
+
+            {/* Panel edición expandido */}
+            {isExpanded && !swappingDay && (
+              <div className="border-t border-[#F1F5F9] p-4 space-y-4">
+                {/* Tipo */}
+                <div>
+                  <label className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2 block">Tipo de sesión</label>
+                  <div className="flex flex-wrap gap-2">
+                    {TRAINING_TYPES.map(t => (
+                      <button key={t.id} onClick={() => setDayType(day, t.id)}
+                        className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                          dayData.type === t.id ? 'bg-[#0F172A] text-white' : 'bg-[#F1F5F9] text-[#64748B] hover:bg-[#E2E8F0]'
+                        }`}>
+                        <span>{t.emoji}</span><span>{t.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {!isRest && (
+                  <>
+                    {/* Nombre y duración */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-semibold text-[#64748B] mb-1 block">Nombre</label>
+                        <input value={dayData.name || ''} onChange={e => updateDay(day, 'name', e.target.value)}
+                          placeholder="Ej: Tren superior"
+                          className="w-full bg-[#F8FAFC] border border-[#E2E8F0] focus:border-[#16A34A] rounded-xl px-3 py-2 text-sm focus:outline-none"/>
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-[#64748B] mb-1 block">Duración (min)</label>
+                        <input type="number" value={dayData.duration_minutes || ''} placeholder="60"
+                          onChange={e => updateDay(day, 'duration_minutes', parseInt(e.target.value) || 60)}
+                          className="w-full bg-[#F8FAFC] border border-[#E2E8F0] focus:border-[#16A34A] rounded-xl px-3 py-2 text-sm focus:outline-none"/>
+                      </div>
+                    </div>
+
+                    {/* Ejercicios */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-xs font-semibold text-[#64748B] uppercase tracking-wider">Ejercicios</label>
+                        <button onClick={() => addExercise(day)}
+                          className="text-xs text-[#16A34A] font-semibold bg-[#16A34A]/10 px-2.5 py-1 rounded-lg hover:bg-[#16A34A]/20 transition-colors">
+                          + Añadir
+                        </button>
+                      </div>
+
+                      {(dayData.exercises || []).length === 0 ? (
+                        <p className="text-sm text-[#94A3B8] text-center py-4">Sin ejercicios. Pulsa "+ Añadir" para empezar.</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {(dayData.exercises || []).map((ex, exIdx) => (
+                            <div key={exIdx} className="bg-[#F8FAFC] rounded-xl p-3 border border-[#E2E8F0]">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="w-5 h-5 bg-[#0F172A] text-white rounded-full flex items-center justify-center text-[10px] font-bold shrink-0">{exIdx+1}</span>
+                                <input value={ex.name || ''} onChange={e => updateExercise(day, exIdx, 'name', e.target.value)}
+                                  placeholder="Nombre del ejercicio"
+                                  className="flex-1 bg-white border border-[#E2E8F0] focus:border-[#16A34A] rounded-lg px-2.5 py-1.5 text-sm font-medium focus:outline-none"/>
+                                <button onClick={() => removeExercise(day, exIdx)}
+                                  className="w-6 h-6 flex items-center justify-center text-[#94A3B8] hover:text-red-500 transition-colors rounded-lg hover:bg-red-50 shrink-0 text-sm">
+                                  ✕
+                                </button>
+                              </div>
+                              <div className="grid grid-cols-3 gap-2 mb-2">
+                                <div>
+                                  <label className="text-[10px] text-[#94A3B8] mb-0.5 block">Series</label>
+                                  <input type="number" value={ex.sets || ''} onChange={e => updateExercise(day, exIdx, 'sets', parseInt(e.target.value) || 3)}
+                                    className="w-full bg-white border border-[#E2E8F0] focus:border-[#16A34A] rounded-lg px-2 py-1.5 text-xs text-center focus:outline-none"/>
+                                </div>
+                                <div>
+                                  <label className="text-[10px] text-[#94A3B8] mb-0.5 block">Reps</label>
+                                  <input value={ex.reps || ''} onChange={e => updateExercise(day, exIdx, 'reps', e.target.value)}
+                                    placeholder="8-10"
+                                    className="w-full bg-white border border-[#E2E8F0] focus:border-[#16A34A] rounded-lg px-2 py-1.5 text-xs text-center focus:outline-none"/>
+                                </div>
+                                <div>
+                                  <label className="text-[10px] text-[#94A3B8] mb-0.5 block">Descanso (s)</label>
+                                  <input type="number" value={ex.rest_seconds || ''} onChange={e => updateExercise(day, exIdx, 'rest_seconds', parseInt(e.target.value) || 90)}
+                                    className="w-full bg-white border border-[#E2E8F0] focus:border-[#16A34A] rounded-lg px-2 py-1.5 text-xs text-center focus:outline-none"/>
+                                </div>
+                              </div>
+                              <input value={ex.notes || ''} onChange={e => updateExercise(day, exIdx, 'notes', e.target.value)}
+                                placeholder="Notas opcionales..."
+                                className="w-full bg-white border border-[#E2E8F0] focus:border-[#16A34A] rounded-lg px-2.5 py-1.5 text-xs text-[#64748B] focus:outline-none"/>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )
+      })}
+
+      <button onClick={save} disabled={saving || !!swappingDay}
+        className={`w-full py-4 rounded-xl font-bold text-sm transition-all ${
+          saved ? 'bg-[#16A34A] text-white' :
+          swappingDay ? 'bg-[#E2E8F0] text-[#94A3B8] cursor-not-allowed' :
+          'bg-[#0F172A] hover:bg-[#1E293B] text-white disabled:opacity-50'
+        }`}>
+        {saving ? 'Guardando...' : saved ? '✓ Cambios guardados' : swappingDay ? 'Termina el intercambio primero' : 'Guardar cambios'}
+      </button>
+    </div>
+  )
+}
+
 // ── PlanTab (main export) ─────────────────────────────────────────────────────
-export default function PlanTab({ plan, user, initialSubTab = 'calendar', onSubTabChange }) {
-  const [subTab, setSubTab] = useState(initialSubTab)
+export default function PlanTab({ plan, user, initialSubTab = 'calendar', onSubTabChange, onPlanUpdate }) {
+  const [subTab,     setSubTab]     = useState(initialSubTab)
+  const [localPlan,  setLocalPlan]  = useState(plan)
+
+  useEffect(() => { setLocalPlan(plan) }, [plan])
 
   useEffect(() => {
     if (initialSubTab && initialSubTab !== subTab) setSubTab(initialSubTab)
@@ -645,26 +940,33 @@ export default function PlanTab({ plan, user, initialSubTab = 'calendar', onSubT
     onSubTabChange?.(tab)
   }
 
+  const handlePlanUpdate = (updatedPlan) => {
+    setLocalPlan(updatedPlan)
+    onPlanUpdate?.(updatedPlan)
+  }
+
   const SUB_TABS = [
-    { id: 'calendar', label: 'Calendario', emoji: '📅' },
-    { id: 'workout',  label: 'Entrenar hoy', emoji: '💪' },
-    { id: 'library',  label: 'Ejercicios', emoji: '📚' },
+    { id: 'calendar', label: 'Calendario',  emoji: '📅' },
+    { id: 'workout',  label: 'Entrenar',    emoji: '💪' },
+    { id: 'edit',     label: 'Editar plan', emoji: '✏️' },
+    { id: 'library',  label: 'Ejercicios',  emoji: '📚' },
   ]
 
   return (
     <div className="space-y-4">
       {/* Sub-navegación */}
-      <div className="flex bg-[#F1F5F9] rounded-xl p-1">
+      <div className="grid grid-cols-4 bg-[#F1F5F9] rounded-xl p-1 gap-0.5">
         {SUB_TABS.map(t => (
           <button key={t.id} onClick={() => changeSubTab(t.id)}
-            className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-xs font-semibold transition-all ${subTab === t.id ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B]'}`}>
-            <span>{t.emoji}</span><span>{t.label}</span>
+            className={`flex flex-col items-center justify-center gap-0.5 py-2 rounded-lg text-[10px] font-semibold transition-all ${subTab === t.id ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B]'}`}>
+            <span className="text-sm">{t.emoji}</span><span>{t.label}</span>
           </button>
         ))}
       </div>
 
-      {subTab === 'calendar' && <PlanCalendarSub plan={plan} user={user}/>}
-      {subTab === 'workout'  && <WorkoutTodaySub plan={plan} user={user}/>}
+      {subTab === 'calendar' && <PlanCalendarSub plan={localPlan} user={user}/>}
+      {subTab === 'workout'  && <WorkoutTodaySub plan={localPlan} user={user}/>}
+      {subTab === 'edit'     && <EditPlanSub plan={localPlan} onPlanUpdate={handlePlanUpdate}/>}
       {subTab === 'library'  && <ExerciseLibrarySub/>}
     </div>
   )

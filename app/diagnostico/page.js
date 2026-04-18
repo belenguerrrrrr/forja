@@ -276,7 +276,7 @@ export default function DiagnosticoPage() {
 
         {/* Mi Tracker */}
         <button
-          onClick={() => router.push('/tracker')}
+          onClick={() => router.push('/pro')}
           className="w-full bg-white border-2 border-[#16A34A] text-[#16A34A] font-bold py-4 rounded-2xl transition-colors hover:bg-[#F0FDF4] text-sm flex items-center justify-center gap-2"
         >
           <span>📊</span> Mi Tracker diario

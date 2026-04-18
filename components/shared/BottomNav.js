@@ -8,11 +8,10 @@ export default function BottomNav({ isPro = false }) {
 
   const items = [
     { label: 'Inicio',  emoji: '🏠', href: '/dashboard'  },
-    { label: 'Tracker', emoji: '📊', href: '/tracker'    },
     { label: 'Mi Plan', emoji: '📋', href: '/diagnostico' },
     {
-      label: isPro ? 'Coach' : 'Coach',
-      emoji: isPro ? '💬' : '🔒',
+      label: isPro ? 'Pro' : 'Pro',
+      emoji: isPro ? '⚡' : '🔒',
       href:  isPro ? '/pro' : null,
       locked: !isPro,
     },

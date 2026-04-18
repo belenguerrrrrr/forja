@@ -414,7 +414,7 @@ export default function EvolucionPage() {
       {/* Header */}
       <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#E2E8F0]">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
-          <button onClick={() => router.push('/tracker')} className="text-[#94A3B8] hover:text-[#0F172A] transition-colors text-lg">←</button>
+          <button onClick={() => router.push('/pro')} className="text-[#94A3B8] hover:text-[#0F172A] transition-colors text-lg">←</button>
           <h1 className="font-bold text-[#0F172A] text-lg flex-1">Evolución</h1>
           <div className="text-xs text-[#94A3B8]">Objetivo: {targetCal} kcal</div>
         </div>

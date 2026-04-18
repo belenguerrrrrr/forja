@@ -140,7 +140,7 @@ function UserMenu({ email }) {
             Mi dashboard →
           </button>
           <button
-            onClick={() => router.push('/tracker')}
+            onClick={() => router.push('/pro')}
             className="w-full text-left px-4 py-2.5 text-sm text-[#0F172A] hover:bg-[#F8FAFC] transition-colors"
           >
             Mi tracker →
@@ -192,7 +192,7 @@ function NavBar({ onCTA }) {
           <a href="#como-funciona" className="hover:text-[#0F172A] transition-colors">Cómo funciona</a>
           <a href="#precios" className="hover:text-[#0F172A] transition-colors">Precios</a>
           <a href="#testimonios" className="hover:text-[#0F172A] transition-colors">Testimonios</a>
-          <a href="/tracker" className="hover:text-[#0F172A] transition-colors font-medium text-[#16A34A]">Mi tracker</a>
+          <a href="/pro" className="hover:text-[#0F172A] transition-colors font-medium text-[#16A34A]">Mi tracker</a>
         </div>
         {userEmail ? (
           <UserMenu email={userEmail} />
@@ -1236,7 +1236,7 @@ export default function LandingPage() {
           <div className="flex flex-wrap justify-center gap-6 text-xs text-[#64748B]">
             <a href="/privacidad" className="hover:text-[#0F172A] transition-colors">Privacidad</a>
             <a href="/terminos" className="hover:text-[#0F172A] transition-colors">Términos</a>
-            <a href="/tracker" className="hover:text-[#0F172A] transition-colors">Mi tracker</a>
+            <a href="/pro" className="hover:text-[#0F172A] transition-colors">Mi tracker</a>
             <a href="mailto:hola@forjafit.es" className="hover:text-[#0F172A] transition-colors">hola@forjafit.es</a>
           </div>
           <div className="text-xs text-[#64748B]">© 2026 FORJA · Hecho con IA en España 🇪🇸</div>

@@ -261,6 +261,7 @@ function ProContent() {
             plan={plan} user={user}
             initialSubTab={planSubTab}
             onSubTabChange={setPlanSubTab}
+            onPlanUpdate={setPlan}
           />
         )}
         {activeTab === 'calendar' && (
