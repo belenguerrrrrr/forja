@@ -91,15 +91,21 @@ export default function HoyTab({ user, plan, userData, logs, setActiveTab }) {
   const net        = Math.round(macros.cal)
   const remaining  = calTarget - (net - burned)
 
-  // Peso 14 días
-  const weightData = useMemo(() =>
-    (logs || []).filter(l => l.weight_morning != null).slice(-14)
-      .map(l => ({ d: l.log_date, w: parseFloat(l.weight_morning) })),
-    [logs],
-  )
+  // Peso 14 días — fallback a current_weight del perfil si no hay check-ins
+  const weightData = useMemo(() => {
+    const fromLogs = (logs || [])
+      .filter(l => l.weight_morning != null)
+      .slice(-14)
+      .map(l => ({ d: l.log_date, w: parseFloat(l.weight_morning) }))
+    if (fromLogs.length > 0) return fromLogs
+    // Sin historial: un único punto del peso del perfil
+    const cw = userData?.current_weight ? parseFloat(userData.current_weight) : null
+    return cw ? [{ d: new Date().toISOString().split('T')[0], w: cw }] : []
+  }, [logs, userData])
   const weightNow    = weightData[weightData.length - 1]?.w ?? null
   const weightFirst  = weightData[0]?.w ?? null
-  const weightChange = weightNow != null && weightFirst != null ? (weightNow - weightFirst).toFixed(1) : null
+  const weightChange = weightData.length > 1 && weightNow != null && weightFirst != null
+    ? (weightNow - weightFirst).toFixed(1) : null
   const weightTarget = userData?.target_weight ? parseFloat(userData.target_weight) : null
 
   // Racha
@@ -209,33 +215,38 @@ export default function HoyTab({ user, plan, userData, logs, setActiveTab }) {
         </div>
       </div>
 
-      {/* ── Peso 14 días ── */}
-      {weightData.length > 1 && (
-        <div className="mb-3.5">
-          <div className="bg-forja-surface rounded-[20px] p-[18px]" style={{ border: '0.5px solid rgba(14,16,21,0.08)', boxShadow: '0 1px 2px rgba(15,23,42,0.04)' }}>
-            <div className="flex justify-between mb-2.5">
-              <div>
-                <p className="text-forja-muted uppercase text-[10px] font-bold" style={{ letterSpacing: 1.2 }}>Peso · 14 días</p>
-                <p className="font-display text-forja-text leading-none mt-1.5" style={{ fontSize: 32, letterSpacing: 1 }}>
-                  {weightNow}
-                  <span className="text-forja-muted ml-1" style={{ fontSize: 16 }}>kg</span>
-                </p>
-              </div>
-              <div className="text-right">
-                {weightChange !== null && (
-                  <span className="inline-flex items-center bg-forja-primary/[0.13] text-forja-primary rounded-full px-2 py-1 text-[10px] font-bold uppercase" style={{ letterSpacing: 0.8 }}>
-                    {parseFloat(weightChange) > 0 ? '+' : ''}{weightChange} kg
-                  </span>
-                )}
-                {weightTarget && (
-                  <p className="text-forja-muted text-[11px] mt-1.5">Objetivo: {weightTarget} kg</p>
-                )}
-              </div>
+      {/* ── Peso 14 días ── siempre visible */}
+      <div className="mb-3.5">
+        <div className="bg-forja-surface rounded-[20px] p-[18px]" style={{ border: '0.5px solid rgba(14,16,21,0.08)', boxShadow: '0 1px 2px rgba(15,23,42,0.04)' }}>
+          <div className="flex justify-between mb-2.5">
+            <div>
+              <p className="text-forja-muted uppercase text-[10px] font-bold" style={{ letterSpacing: 1.2 }}>Peso · 14 días</p>
+              <p className="font-display text-forja-text leading-none mt-1.5" style={{ fontSize: 32, letterSpacing: 1 }}>
+                {weightNow ?? '–'}
+                <span className="text-forja-muted ml-1" style={{ fontSize: 16 }}>kg</span>
+              </p>
             </div>
-            <WeightSpark data={weightData}/>
+            <div className="text-right">
+              {weightChange !== null && (
+                <span className="inline-flex items-center bg-forja-primary/[0.13] text-forja-primary rounded-full px-2 py-1 text-[10px] font-bold uppercase" style={{ letterSpacing: 0.8 }}>
+                  {parseFloat(weightChange) > 0 ? '+' : ''}{weightChange} kg
+                </span>
+              )}
+              {weightTarget && (
+                <p className="text-forja-muted text-[11px] mt-1.5">Objetivo: {weightTarget} kg</p>
+              )}
+            </div>
           </div>
+          {weightData.length > 1
+            ? <WeightSpark data={weightData}/>
+            : (
+              <p className="text-forja-faint text-xs text-center py-4">
+                Registra tu peso cada mañana para ver la evolución
+              </p>
+            )
+          }
         </div>
-      )}
+      </div>
 
       {/* ── Racha + Adherencia ── */}
       <div className="grid grid-cols-2 gap-2.5 mb-3.5">
