@@ -42,7 +42,7 @@ export default function LabTab({ plan, userData }) {
             </div>
             <input type="range" min={s.min} max={s.max} step={s.step} value={scenario[s.key]}
               onChange={e => setScenario(prev => ({ ...prev, [s.key]: Number(e.target.value) }))}
-              style={{ accentColor: '#16A34A' }} className="w-full"/>
+              style={{ accentColor: '#16A34A' }} className="w-full h-5 cursor-pointer"/>
           </div>
         ))}
       </div>

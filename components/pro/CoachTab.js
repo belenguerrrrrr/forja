@@ -80,7 +80,7 @@ export default function CoachTab({ user }) {
         <div className="flex flex-wrap gap-2 mb-3">
           {SUGGESTIONS.map(s => (
             <button key={s} onClick={() => setInput(s)}
-              className="text-xs bg-white border border-[#E2E8F0] hover:border-[#16A34A] text-[#64748B] hover:text-[#0F172A] px-3 py-1.5 rounded-full transition-all">
+              className="text-xs bg-white border border-[#E2E8F0] hover:border-[#16A34A] text-[#64748B] hover:text-[#0F172A] px-3 py-2.5 rounded-full transition-all min-h-[44px] flex items-center">
               {s}
             </button>
           ))}
@@ -91,10 +91,10 @@ export default function CoachTab({ user }) {
         <input value={input} onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && !e.shiftKey && send()}
           placeholder="Pregúntale a tu coach..."
-          className="flex-1 bg-white border border-[#E2E8F0] focus:border-[#16A34A] rounded-xl px-4 py-3 text-sm text-[#0F172A] placeholder-[#64748B] focus:outline-none"
+          className="flex-1 bg-white border border-[#E2E8F0] focus:border-[#16A34A] rounded-xl px-4 py-3 text-base text-[#0F172A] placeholder-[#64748B] focus:outline-none"
         />
         <button onClick={send} disabled={!input.trim() || sending}
-          className="bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-40 text-white px-4 rounded-xl font-semibold text-sm">
+          className="bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-40 text-white px-4 rounded-xl font-semibold text-sm min-h-[44px] min-w-[44px]">
           →
         </button>
       </div>

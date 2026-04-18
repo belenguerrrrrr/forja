@@ -588,7 +588,7 @@ export default function TrackerTab({ user, plan, userData, onGoToWorkout }) {
                 </div>
                 <input type="range" min="4" max="12" step="0.5" value={checkin.sleepHours}
                   onChange={e => setCheckin(p => ({ ...p, sleepHours: parseFloat(e.target.value) }))}
-                  style={{ accentColor: '#16A34A' }} className="w-full"/>
+                  style={{ accentColor: '#16A34A' }} className="w-full h-5 cursor-pointer"/>
                 <div className="flex justify-between text-xs text-[#94A3B8] mt-1"><span>4h</span><span>8h</span><span>12h</span></div>
               </div>
               {/* Calidad sueño */}

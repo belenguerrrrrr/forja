@@ -200,13 +200,13 @@ function NavBar({ onCTA }) {
           <div className="flex items-center gap-2">
             <button
               onClick={() => router.push('/auth')}
-              className="text-sm font-medium text-[#64748B] hover:text-[#0F172A] px-3 py-2.5 rounded-lg transition-colors"
+              className="text-sm font-medium text-[#64748B] hover:text-[#0F172A] px-3 py-2.5 rounded-lg transition-colors min-h-[44px] flex items-center"
             >
               Iniciar sesión
             </button>
             <button
               onClick={onCTA}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors hidden sm:block"
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors hidden sm:flex sm:items-center min-h-[44px]"
             >
               Crear mi plan gratis →
             </button>
@@ -587,7 +587,7 @@ export default function LandingPage() {
               className="leading-none mb-6 opacity-0 animate-fade-up delay-100"
               style={{
                 fontFamily: "'Bebas Neue', sans-serif",
-                fontSize: 'clamp(3.5rem, 7vw, 5.5rem)',
+                fontSize: 'clamp(2.5rem, 7vw, 5rem)',
                 letterSpacing: '0.02em',
               }}
             >
@@ -642,7 +642,7 @@ export default function LandingPage() {
           </div>
 
           {/* Columna derecha — Mockup diagnóstico */}
-          <div className="opacity-0 animate-fade-up delay-300">
+          <div className="opacity-0 animate-fade-up delay-300 max-md:mt-8 max-md:max-h-[400px] max-md:overflow-hidden">
             <DiagnosticoMockup />
           </div>
         </div>
@@ -883,7 +883,7 @@ export default function LandingPage() {
 
           <div className="grid md:grid-cols-2 gap-6">
             {/* Gratis */}
-            <div className="bg-white border border-[#E2E8F0] rounded-2xl p-8 shadow-sm">
+            <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 md:p-8 shadow-sm">
               <div className="inline-block bg-[#F1F5F9] text-[#64748B] text-xs font-bold px-3 py-1 rounded-full mb-6 uppercase tracking-wider">
                 Gratis
               </div>
@@ -903,7 +903,7 @@ export default function LandingPage() {
               </ul>
             </div>
             {/* Pro */}
-            <div className="bg-[#F0FDF4] border border-[#16A34A]/30 rounded-2xl p-8 shadow-sm">
+            <div className="bg-[#F0FDF4] border border-[#16A34A]/30 rounded-2xl p-6 md:p-8 shadow-sm">
               <div className="inline-block bg-[#16A34A]/20 text-[#16A34A] text-xs font-bold px-3 py-1 rounded-full mb-6 uppercase tracking-wider">
                 Pro ⚡
               </div>
@@ -1039,7 +1039,7 @@ export default function LandingPage() {
 
           <div className="grid md:grid-cols-3 gap-6">
             {TESTIMONIALS.map(t => (
-              <div key={t.name} className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm flex flex-col">
+              <div key={t.name} className="bg-white border border-[#E2E8F0] rounded-2xl p-4 md:p-6 shadow-sm flex flex-col">
                 {/* Resultado destacado */}
                 <div
                   className="text-2xl font-bold mb-3"
@@ -1188,7 +1188,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── SECCIÓN 10: CTA FINAL (oscuro) ──────────────────────────────── */}
-      <section className="py-32 px-6 bg-[#0F172A] relative overflow-hidden">
+      <section className="py-16 md:py-32 px-6 bg-[#0F172A] relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-[#16A34A]/10 rounded-full blur-[120px]" />
         </div>
@@ -1234,10 +1234,10 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <LogoNav />
           <div className="flex flex-wrap justify-center gap-6 text-xs text-[#64748B]">
-            <a href="/privacidad" className="hover:text-[#0F172A] transition-colors">Privacidad</a>
-            <a href="/terminos" className="hover:text-[#0F172A] transition-colors">Términos</a>
-            <a href="/pro" className="hover:text-[#0F172A] transition-colors">Mi tracker</a>
-            <a href="mailto:hola@forjafit.es" className="hover:text-[#0F172A] transition-colors">hola@forjafit.es</a>
+            <a href="/privacidad" className="hover:text-[#0F172A] transition-colors py-2 min-h-[44px] flex items-center">Privacidad</a>
+            <a href="/terminos" className="hover:text-[#0F172A] transition-colors py-2 min-h-[44px] flex items-center">Términos</a>
+            <a href="/pro" className="hover:text-[#0F172A] transition-colors py-2 min-h-[44px] flex items-center">Mi tracker</a>
+            <a href="mailto:hola@forjafit.es" className="hover:text-[#0F172A] transition-colors py-2 min-h-[44px] flex items-center">hola@forjafit.es</a>
           </div>
           <div className="text-xs text-[#64748B]">© 2026 FORJA · Hecho con IA en España 🇪🇸</div>
         </div>
