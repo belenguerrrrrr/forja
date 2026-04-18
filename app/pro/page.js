@@ -59,20 +59,57 @@ function ProContent() {
     init()
   }, [])
 
-  const TABS = [
-    { id: 'dashboard', label: 'Dashboard',  emoji: '📊' },
-    { id: 'tracker',   label: 'Tracker',    emoji: '🍽️' },
-    { id: 'plan',      label: 'Mi Plan',    emoji: '📋' },
-    { id: 'calendar',  label: 'Calendario', emoji: '📅' },
-    { id: 'coach',     label: 'Coach',      emoji: '🤖' },
-    { id: 'lab',       label: 'Lab',        emoji: '🧪' },
+  // Tabs principales del bottom bar (4 del diseño) + extra tabs accesibles desde arriba
+  const BOTTOM_TABS = [
+    {
+      id: 'dashboard', label: 'Hoy',
+      icon: (active) => (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path d="M3 11l9-7 9 7v9a2 2 0 01-2 2h-3v-7h-8v7H5a2 2 0 01-2-2v-9z"
+            stroke={active ? '#0F7A3A' : 'rgba(107,107,111,0.9)'} strokeWidth="1.8" strokeLinejoin="round"/>
+        </svg>
+      ),
+    },
+    {
+      id: 'tracker', label: 'Tracker',
+      icon: (active) => (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="9" stroke={active ? '#0F7A3A' : 'rgba(107,107,111,0.9)'} strokeWidth="1.8"/>
+          <circle cx="12" cy="12" r="4" stroke={active ? '#0F7A3A' : 'rgba(107,107,111,0.9)'} strokeWidth="1.8"/>
+        </svg>
+      ),
+    },
+    {
+      id: 'plan', label: 'Entrenar',
+      icon: (active) => (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path d="M3 9v6M7 6v12M17 6v12M21 9v6M7 12h10"
+            stroke={active ? '#0F7A3A' : 'rgba(107,107,111,0.9)'} strokeWidth="1.8" strokeLinecap="round"/>
+        </svg>
+      ),
+    },
+    {
+      id: 'coach', label: 'Coach',
+      icon: (active) => (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path d="M4 6a2 2 0 012-2h12a2 2 0 012 2v9a2 2 0 01-2 2h-8l-4 4v-4H6a2 2 0 01-2-2V6z"
+            stroke={active ? '#0F7A3A' : 'rgba(107,107,111,0.9)'} strokeWidth="1.8" strokeLinejoin="round"/>
+        </svg>
+      ),
+    },
+  ]
+
+  // Tabs extra (calendario, lab) accesibles desde un mini header cuando no es dashboard
+  const EXTRA_TABS = [
+    { id: 'calendar', label: 'Calendario' },
+    { id: 'lab',      label: 'Lab'        },
   ]
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+      <div className="min-h-screen bg-forja-bg flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-2 border-t-[#16A34A] border-[#E2E8F0] rounded-full animate-spin mx-auto mb-4"/>
+          <div className="w-12 h-12 border-2 border-t-forja-primary border-forja-softFill rounded-full animate-spin mx-auto mb-4"/>
           <LogoIcon size={36}/>
         </div>
       </div>
@@ -81,19 +118,19 @@ function ProContent() {
 
   if (!plan) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-6">
+      <div className="min-h-screen bg-forja-bg flex items-center justify-center p-6">
         <div className="text-center max-w-sm">
           <div className="text-5xl mb-4">📋</div>
-          <h2 className="text-2xl font-bold text-[#0F172A] mb-3" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em' }}>
+          <h2 className="font-display text-3xl text-forja-text mb-3" style={{ letterSpacing: '0.05em' }}>
             NO TIENES UN PLAN AÚN
           </h2>
-          <p className="text-[#64748B] mb-8 leading-relaxed">Completa el diagnóstico para que la IA genere tu plan personalizado.</p>
+          <p className="text-forja-muted mb-8 leading-relaxed">Completa el diagnóstico para que la IA genere tu plan personalizado.</p>
           <button onClick={() => router.push('/onboarding')}
-            className="bg-[#16A34A] hover:bg-[#15803D] text-white font-semibold px-8 py-4 rounded-xl">
+            className="bg-forja-primary hover:bg-forja-primary-hover text-white font-semibold px-8 py-4 rounded-xl">
             Generar mi plan →
           </button>
           <button onClick={async () => { await supabase.auth.signOut(); router.push('/') }}
-            className="block mx-auto mt-4 text-sm text-[#64748B] hover:text-[#0F172A]">
+            className="block mx-auto mt-4 text-sm text-forja-muted hover:text-forja-text">
             Cerrar sesión
           </button>
         </div>
@@ -101,29 +138,31 @@ function ProContent() {
     )
   }
 
+  const isBottomTab = BOTTOM_TABS.some(t => t.id === activeTab)
+
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-      {/* Header + tabs */}
-      <div className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-[#E2E8F0]">
-        <div className="max-w-2xl mx-auto px-4">
-          <div className="flex items-center justify-between h-14">
-            <LogoNav/>
+    <div className="min-h-screen bg-forja-bg text-forja-text font-body">
+
+      {/* Mini header: solo para tabs extra (calendario, lab) */}
+      {!isBottomTab && (
+        <div className="sticky top-0 z-40 bg-forja-tabBarBg backdrop-blur-xl border-b border-forja-hairline">
+          <div className="max-w-2xl mx-auto px-5 h-12 flex items-center justify-between">
+            <div className="flex gap-1">
+              {[...BOTTOM_TABS, ...EXTRA_TABS].map(tab => (
+                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${activeTab === tab.id ? 'bg-forja-primary text-white' : 'text-forja-muted hover:text-forja-text'}`}>
+                  {tab.label || BOTTOM_TABS.find(t => t.id === tab.id)?.label}
+                </button>
+              ))}
+            </div>
             <button onClick={async () => { await supabase.auth.signOut(); router.push('/') }}
-              className="text-xs text-[#64748B] hover:text-[#0F172A]">Salir</button>
-          </div>
-          <div className="flex overflow-x-auto gap-1 pb-2 scrollbar-hide">
-            {TABS.map(tab => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeTab === tab.id ? 'bg-[#16A34A] text-white' : 'text-[#64748B] hover:text-[#0F172A]'}`}>
-                <span>{tab.emoji}</span><span>{tab.label}</span>
-              </button>
-            ))}
+              className="text-xs text-forja-muted hover:text-forja-text">Salir</button>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Contenido */}
-      <div className="max-w-2xl mx-auto px-4 py-6 pb-24">
+      <div className="max-w-2xl mx-auto px-5 pb-28">
         {activeTab === 'dashboard' && (
           <HoyTab user={user} plan={plan} userData={userData} logs={logs} setActiveTab={setActiveTab}/>
         )}
@@ -147,7 +186,32 @@ function ProContent() {
         {activeTab === 'coach' && <CoachTab user={user}/>}
         {activeTab === 'lab'   && <LabTab plan={plan} userData={userData}/>}
       </div>
-      <BottomNav isPro/>
+
+      {/* Bottom tab bar editorial */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40"
+        style={{
+          background: 'rgba(245,245,242,0.92)',
+          backdropFilter: 'blur(20px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          borderTop: '0.5px solid rgba(14,16,21,0.08)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}>
+        <div className="max-w-2xl mx-auto flex justify-around items-end px-3 pt-2 pb-2">
+          {BOTTOM_TABS.map(tab => {
+            const active = activeTab === tab.id
+            return (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                className="flex flex-col items-center gap-0.5 px-4 py-1 min-w-[56px]">
+                {tab.icon(active)}
+                <span className="text-[10px] font-semibold" style={{ color: active ? '#0F7A3A' : 'rgba(107,107,111,0.9)' }}>
+                  {tab.label}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </nav>
+
     </div>
   )
 }

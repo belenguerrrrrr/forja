@@ -3,8 +3,7 @@
 import { useMemo } from 'react'
 import { useTracker } from '@/hooks/useTracker'
 
-// ── Sub-componentes ───────────────────────────────────────────────────────────
-
+// ── RingProgress ──────────────────────────────────────────────────────────────
 function RingProgress({ value, max, size = 82, stroke = 7, color, label, sublabel }) {
   const pct  = Math.min(100, Math.max(0, max > 0 ? (value / max) * 100 : 0))
   const r    = (size - stroke) / 2
@@ -13,15 +12,15 @@ function RingProgress({ value, max, size = 82, stroke = 7, color, label, sublabe
   return (
     <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-        <circle cx={size/2} cy={size/2} r={r} stroke="#EFEFEA" strokeWidth={stroke} fill="none"/>
-        <circle cx={size/2} cy={size/2} r={r} stroke={color}   strokeWidth={stroke} fill="none"
+        <circle cx={size/2} cy={size/2} r={r} className="stroke-forja-softFill" strokeWidth={stroke} fill="none"/>
+        <circle cx={size/2} cy={size/2} r={r} stroke={color} strokeWidth={stroke} fill="none"
           strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"/>
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 22, letterSpacing: 1, lineHeight: 1, color: '#0E1015' }}>
+        <span className="font-display text-forja-text" style={{ fontSize: 22, letterSpacing: 1, lineHeight: 1 }}>
           {label}
         </span>
-        <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: 0.6, textTransform: 'uppercase', color: '#6B6B6F', marginTop: 2 }}>
+        <span className="text-forja-muted uppercase tracking-wider" style={{ fontSize: 9, fontWeight: 600 }}>
           {sublabel}
         </span>
       </div>
@@ -29,6 +28,7 @@ function RingProgress({ value, max, size = 82, stroke = 7, color, label, sublabe
   )
 }
 
+// ── WeightSpark ───────────────────────────────────────────────────────────────
 function WeightSpark({ data }) {
   if (!data || data.length < 2) return null
   const W = 320, H = 60, P = 4
@@ -43,7 +43,7 @@ function WeightSpark({ data }) {
   const path = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p.join(',')).join(' ')
   const area = path + ` L ${W-P},${H-P} L ${P},${H-P} Z`
   return (
-    <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: 'block' }}>
+    <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="block">
       <defs>
         <linearGradient id="hoySparkFill" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%"   stopColor="#0F7A3A" stopOpacity="0.18"/>
@@ -53,102 +53,56 @@ function WeightSpark({ data }) {
       <path d={area} fill="url(#hoySparkFill)"/>
       <path d={path} fill="none" stroke="#0F7A3A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
       {pts.map(([x, y], i) => i === pts.length - 1 && (
-        <circle key={i} cx={x} cy={y} r="3" fill="#0F7A3A" stroke="#FFFFFF" strokeWidth="1.5"/>
+        <circle key={i} cx={x} cy={y} r="3" fill="#0F7A3A" stroke="white" strokeWidth="1.5"/>
       ))}
     </svg>
   )
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-const BEBAS = { fontFamily: "'Bebas Neue',sans-serif" }
-const EYEBROW = {
-  fontSize: 10, fontWeight: 700, letterSpacing: 1.2,
-  textTransform: 'uppercase', color: '#6B6B6F',
-}
-const EYEBROW_PRIMARY = { ...EYEBROW, color: '#0F7A3A' }
-const EYEBROW_ACCENT  = { ...EYEBROW, letterSpacing: 1.4, color: '#0F7A3A' }
-
-function Card({ children, hero = false, style = {}, pad = 18 }) {
-  return (
-    <div style={{
-      background:   hero ? '#0E1015' : '#FFFFFF',
-      color:        hero ? '#fff'    : '#0E1015',
-      borderRadius: 20,
-      padding:      pad,
-      border:       hero ? 'none' : '0.5px solid rgba(14,16,21,0.08)',
-      boxShadow:    hero ? 'none' : '0 1px 2px rgba(15,23,42,0.04)',
-      ...style,
-    }}>
-      {children}
-    </div>
-  )
-}
-
-function StatusPill({ children, primary = false }) {
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center',
-      background: primary ? '#0F7A3A22' : '#EFEFEA',
-      color:      primary ? '#0F7A3A'   : '#6B6B6F',
-      fontSize: 10, fontWeight: 700, letterSpacing: 0.8,
-      textTransform: 'uppercase',
-      padding: '4px 8px', borderRadius: 999,
-      fontFamily: "'DM Sans',sans-serif",
-    }}>
-      {children}
-    </span>
-  )
-}
-
-// ── Componente principal ──────────────────────────────────────────────────────
-
+// ── HoyTab ────────────────────────────────────────────────────────────────────
 export default function HoyTab({ user, plan, userData, logs, setActiveTab }) {
   const { foodEntries, workoutEntries } = useTracker(user?.id)
 
-  // ── Fecha ─────────────────────────────────────────────────────────────────
-  const todayKey = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+  // Fecha y semana
+  const todayKey  = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
   const dateLabel = new Date().toLocaleDateString('es-ES', {
     weekday: 'long', day: 'numeric', month: 'short',
   }).toUpperCase()
+  const weekNum = (() => {
+    const d = new Date()
+    const yd = new Date(d.getFullYear(), 0, 1)
+    return String(Math.ceil(((d - yd) / 86400000 + yd.getDay() + 1) / 7)).padStart(2, '0')
+  })()
 
-  // ── Sesión de hoy del training_plan ───────────────────────────────────────
+  // Sesión de hoy
   const session = plan?.training_plan?.[todayKey] ?? null
 
-  // ── Macros de hoy (de food_entries) ──────────────────────────────────────
-  const macros = useMemo(() => {
-    const base = { cal: 0, protein: 0 }
-    return (foodEntries || []).reduce((a, e) => ({
+  // Macros del día
+  const macros = useMemo(() =>
+    (foodEntries || []).reduce((a, e) => ({
       cal:     a.cal     + (e.calories || 0),
       protein: a.protein + (e.protein  || 0),
-    }), base)
-  }, [foodEntries])
-
-  const burned = useMemo(
-    () => (workoutEntries || []).reduce((a, w) => a + (w.calories_burned || 0), 0),
-    [workoutEntries],
+    }), { cal: 0, protein: 0 }),
+    [foodEntries],
   )
-
-  const calTarget  = plan?.daily_calories    ?? 2200
-  const protTarget = plan?.protein_grams     ?? 165
+  const burned     = useMemo(() => (workoutEntries || []).reduce((a, w) => a + (w.calories_burned || 0), 0), [workoutEntries])
+  const calTarget  = plan?.daily_calories ?? 2200
+  const protTarget = plan?.protein_grams  ?? 165
   const net        = Math.round(macros.cal)
   const remaining  = calTarget - (net - burned)
 
-  // ── Datos de peso (últimos 14 días) ───────────────────────────────────────
+  // Peso 14 días
   const weightData = useMemo(() =>
-    (logs || [])
-      .filter(l => l.weight_morning != null)
-      .slice(-14)
+    (logs || []).filter(l => l.weight_morning != null).slice(-14)
       .map(l => ({ d: l.log_date, w: parseFloat(l.weight_morning) })),
     [logs],
   )
   const weightNow    = weightData[weightData.length - 1]?.w ?? null
-  const weightFirst  = weightData[0]?.w                    ?? null
-  const weightChange = weightNow != null && weightFirst != null
-    ? (weightNow - weightFirst).toFixed(1) : null
+  const weightFirst  = weightData[0]?.w ?? null
+  const weightChange = weightNow != null && weightFirst != null ? (weightNow - weightFirst).toFixed(1) : null
   const weightTarget = userData?.target_weight ? parseFloat(userData.target_weight) : null
 
-  // ── Racha ─────────────────────────────────────────────────────────────────
+  // Racha
   const streak = useMemo(() => {
     if (!logs?.length) return 0
     const sorted = [...logs].sort((a, b) => new Date(b.log_date) - new Date(a.log_date))
@@ -160,7 +114,7 @@ export default function HoyTab({ user, plan, userData, logs, setActiveTab }) {
     return count
   }, [logs])
 
-  // ── Adherencia 7 días ────────────────────────────────────────────────────
+  // Adherencia 7 días
   const adherence = useMemo(() => {
     if (!logs?.length || !calTarget) return null
     const last7 = logs.slice(-7).filter(l => l.calories_consumed > 0)
@@ -169,194 +123,147 @@ export default function HoyTab({ user, plan, userData, logs, setActiveTab }) {
     return Math.round((ok.length / last7.length) * 100)
   }, [logs, calTarget])
 
-  // ── Nota del coach ────────────────────────────────────────────────────────
+  // Nota del coach
   const coachNote = useMemo(
     () => [...(logs || [])].reverse().find(l => l.ai_summary_night)?.ai_summary_night ?? null,
     [logs],
   )
 
-  // ── Nombre del usuario ────────────────────────────────────────────────────
+  // Nombre de usuario
   const firstName = (userData?.name || user?.email || '').split(/[\s@]/)[0].toUpperCase() || 'ATLETA'
 
-  // ── Semana (número de semana del año) ────────────────────────────────────
-  const weekNum = (() => {
-    const d  = new Date()
-    const yd = new Date(d.getFullYear(), 0, 1)
-    return String(Math.ceil(((d - yd) / 86400000 + yd.getDay() + 1) / 7)).padStart(2, '0')
-  })()
-
   return (
-    <div style={{ paddingBottom: 8 }}>
+    <div className="pb-2">
 
-      {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div style={{ padding: '14px 0 18px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ ...EYEBROW_ACCENT, marginBottom: 6 }}>
+      {/* ── Header ── */}
+      <div className="pt-3 pb-5">
+        <div className="flex justify-between items-start gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-forja-primary text-[11px] font-semibold uppercase mb-1.5" style={{ letterSpacing: 1.4 }}>
               {dateLabel} · SEMANA {weekNum}
-            </div>
-            <h1 style={{
-              ...BEBAS, fontSize: 34, letterSpacing: 1.2, lineHeight: 1,
-              margin: 0, color: '#0E1015', whiteSpace: 'nowrap',
-              overflow: 'hidden', textOverflow: 'ellipsis',
-            }}>
+            </p>
+            <h1 className="font-display text-[34px] text-forja-text leading-none truncate" style={{ letterSpacing: 1.2 }}>
               HOLA, {firstName}
             </h1>
           </div>
-          <div style={{
-            width: 40, height: 40, borderRadius: 999, background: '#EFEFEA', flexShrink: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            ...BEBAS, fontSize: 16, letterSpacing: 1, color: '#0E1015',
-          }}>
+          <div className="w-10 h-10 rounded-full bg-forja-softFill flex items-center justify-center flex-shrink-0 font-display text-forja-text text-base" style={{ letterSpacing: 1 }}>
             {firstName.slice(0, 2)}
           </div>
         </div>
       </div>
 
-      {/* ── Hero: hoy toca ──────────────────────────────────────────────────── */}
-      <div style={{ marginBottom: 14 }}>
-        <Card hero pad={20}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.4, textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>
+      {/* ── Hero: hoy toca ── */}
+      <div className="mb-3.5">
+        <div className="bg-forja-text rounded-[20px] p-5">
+          <div className="flex justify-between items-start gap-3 mb-3.5">
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-bold uppercase mb-1" style={{ letterSpacing: 1.4, color: 'rgba(255,255,255,0.5)' }}>
                 Hoy toca
-              </div>
-              <div style={{ ...BEBAS, fontSize: 26, letterSpacing: 1, lineHeight: 1 }}>
+              </p>
+              <p className="font-display text-[26px] text-white leading-none" style={{ letterSpacing: 1 }}>
                 {session ? (session.name || session.type || 'ENTRENAMIENTO').toUpperCase() : 'DESCANSO ACTIVO'}
-              </div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 6 }}>
+              </p>
+              <p className="text-[12px] mt-1.5" style={{ color: 'rgba(255,255,255,0.6)' }}>
                 {session
                   ? `${session.exercises?.length ?? '—'} ejercicios · ~${session.duration_minutes ?? 55} min`
                   : 'Sin sesión programada hoy'}
-              </div>
+              </p>
             </div>
-            <div style={{
-              width: 42, height: 42, borderRadius: 10, flexShrink: 0,
-              background: '#0F7A3A',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              ...BEBAS, fontSize: 13, letterSpacing: 1, color: '#fff',
-            }}>
+            <div className="w-[42px] h-[42px] rounded-[10px] flex-shrink-0 bg-forja-primary flex items-center justify-center font-display text-white text-[13px]" style={{ letterSpacing: 1 }}>
               W{weekNum}
             </div>
           </div>
           {session && (
             <button
               onClick={() => setActiveTab('plan')}
-              style={{
-                width: '100%', background: '#0F7A3A', color: '#fff',
-                border: 'none', borderRadius: 14, padding: '14px',
-                fontFamily: "'DM Sans',sans-serif", fontWeight: 700, fontSize: 14,
-                letterSpacing: 0.3, cursor: 'pointer',
-              }}
+              className="w-full bg-forja-primary text-white rounded-[14px] py-3.5 font-body font-bold text-sm transition-colors hover:bg-forja-primary-hover"
+              style={{ letterSpacing: 0.3 }}
             >
               Empezar entrenamiento →
             </button>
           )}
-        </Card>
+        </div>
       </div>
 
-      {/* ── Balance del día ─────────────────────────────────────────────────── */}
-      <div style={{ marginBottom: 14 }}>
-        <Card>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#0E1015' }}>Balance del día</span>
-            <span style={{ fontSize: 11, color: '#6B6B6F' }}>
+      {/* ── Balance del día ── */}
+      <div className="mb-3.5">
+        <div className="bg-forja-surface rounded-[20px] p-[18px]" style={{ border: '0.5px solid rgba(14,16,21,0.08)', boxShadow: '0 1px 2px rgba(15,23,42,0.04)' }}>
+          <div className="flex justify-between items-center mb-3">
+            <span className="text-[13px] font-semibold text-forja-text">Balance del día</span>
+            <span className="text-[11px] text-forja-muted">
               {remaining > 0 ? `+${remaining}` : remaining} kcal disponibles
             </span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', padding: '6px 0 10px' }}>
-            <RingProgress
-              value={net} max={calTarget} color="#0F7A3A"
-              label={net} sublabel="kcal"
-            />
-            <RingProgress
-              value={Math.round(macros.protein)} max={protTarget} color="#B8621B"
-              label={`${Math.round(macros.protein)}g`} sublabel="Proteína"
-            />
-            <RingProgress
-              value={burned} max={500} color="#0E1015"
-              label={burned} sublabel="Quemadas"
-            />
+          <div className="flex justify-around items-center py-1.5 pb-2.5">
+            <RingProgress value={net} max={calTarget} color="#0F7A3A" label={net} sublabel="kcal"/>
+            <RingProgress value={Math.round(macros.protein)} max={protTarget} color="#B8621B" label={`${Math.round(macros.protein)}g`} sublabel="Proteína"/>
+            <RingProgress value={burned} max={500} color="#0E1015" label={burned} sublabel="Quemadas"/>
           </div>
           <button
             onClick={() => setActiveTab('tracker')}
-            style={{
-              width: '100%', marginTop: 4, background: 'transparent',
-              border: '0.5px solid rgba(14,16,21,0.08)', borderRadius: 12,
-              padding: '10px', color: '#0E1015',
-              fontFamily: "'DM Sans',sans-serif", fontWeight: 600, fontSize: 12,
-              cursor: 'pointer',
-            }}
+            className="w-full mt-1 bg-transparent text-forja-text rounded-[12px] py-2.5 text-xs font-semibold transition-colors hover:bg-forja-softFill"
+            style={{ border: '0.5px solid rgba(14,16,21,0.08)' }}
           >
             Registrar comida →
           </button>
-        </Card>
+        </div>
       </div>
 
-      {/* ── Peso · 14 días ──────────────────────────────────────────────────── */}
+      {/* ── Peso 14 días ── */}
       {weightData.length > 1 && (
-        <div style={{ marginBottom: 14 }}>
-          <Card>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+        <div className="mb-3.5">
+          <div className="bg-forja-surface rounded-[20px] p-[18px]" style={{ border: '0.5px solid rgba(14,16,21,0.08)', boxShadow: '0 1px 2px rgba(15,23,42,0.04)' }}>
+            <div className="flex justify-between mb-2.5">
               <div>
-                <div style={EYEBROW}>Peso · 14 días</div>
-                <div style={{ ...BEBAS, fontSize: 32, letterSpacing: 1, color: '#0E1015', lineHeight: 1, marginTop: 6 }}>
+                <p className="text-forja-muted uppercase text-[10px] font-bold" style={{ letterSpacing: 1.2 }}>Peso · 14 días</p>
+                <p className="font-display text-forja-text leading-none mt-1.5" style={{ fontSize: 32, letterSpacing: 1 }}>
                   {weightNow}
-                  <span style={{ fontSize: 16, color: '#6B6B6F', letterSpacing: 0.5, marginLeft: 4 }}>kg</span>
-                </div>
+                  <span className="text-forja-muted ml-1" style={{ fontSize: 16 }}>kg</span>
+                </p>
               </div>
-              <div style={{ textAlign: 'right' }}>
+              <div className="text-right">
                 {weightChange !== null && (
-                  <StatusPill primary>
+                  <span className="inline-flex items-center bg-forja-primary/[0.13] text-forja-primary rounded-full px-2 py-1 text-[10px] font-bold uppercase" style={{ letterSpacing: 0.8 }}>
                     {parseFloat(weightChange) > 0 ? '+' : ''}{weightChange} kg
-                  </StatusPill>
+                  </span>
                 )}
                 {weightTarget && (
-                  <div style={{ fontSize: 11, color: '#6B6B6F', marginTop: 6 }}>
-                    Objetivo: {weightTarget} kg
-                  </div>
+                  <p className="text-forja-muted text-[11px] mt-1.5">Objetivo: {weightTarget} kg</p>
                 )}
               </div>
             </div>
             <WeightSpark data={weightData}/>
-          </Card>
+          </div>
         </div>
       )}
 
-      {/* ── Racha + Adherencia ──────────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
-        <Card pad={16}>
-          <div style={EYEBROW}>Racha</div>
-          <div style={{ ...BEBAS, fontSize: 42, letterSpacing: 1, color: '#0E1015', lineHeight: 1, margin: '8px 0 4px' }}>
-            {streak}
-          </div>
-          <div style={{ fontSize: 11, color: '#6B6B6F' }}>días consecutivos</div>
-        </Card>
-        <Card pad={16}>
-          <div style={EYEBROW}>Adherencia 7d</div>
-          <div style={{ ...BEBAS, fontSize: 42, letterSpacing: 1, color: '#0F7A3A', lineHeight: 1, margin: '8px 0 4px' }}>
+      {/* ── Racha + Adherencia ── */}
+      <div className="grid grid-cols-2 gap-2.5 mb-3.5">
+        <div className="bg-forja-surface rounded-[20px] p-4" style={{ border: '0.5px solid rgba(14,16,21,0.08)', boxShadow: '0 1px 2px rgba(15,23,42,0.04)' }}>
+          <p className="text-forja-muted uppercase text-[10px] font-bold" style={{ letterSpacing: 1.2 }}>Racha</p>
+          <p className="font-display text-forja-text leading-none my-2" style={{ fontSize: 42, letterSpacing: 1 }}>{streak}</p>
+          <p className="text-forja-muted text-[11px]">días consecutivos</p>
+        </div>
+        <div className="bg-forja-surface rounded-[20px] p-4" style={{ border: '0.5px solid rgba(14,16,21,0.08)', boxShadow: '0 1px 2px rgba(15,23,42,0.04)' }}>
+          <p className="text-forja-muted uppercase text-[10px] font-bold" style={{ letterSpacing: 1.2 }}>Adherencia 7d</p>
+          <p className="font-display text-forja-primary leading-none my-2" style={{ fontSize: 42, letterSpacing: 1 }}>
             {adherence !== null ? <>{adherence}<span style={{ fontSize: 22 }}>%</span></> : '–'}
-          </div>
-          <div style={{ fontSize: 11, color: '#6B6B6F' }}>en objetivo</div>
-        </Card>
+          </p>
+          <p className="text-forja-muted text-[11px]">en objetivo</p>
+        </div>
       </div>
 
-      {/* ── Nota del coach ──────────────────────────────────────────────────── */}
+      {/* ── Nota del coach ── */}
       {coachNote && (
-        <Card pad={16} style={{ background: '#DDECE2', border: 'none' }}>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-            <div style={{
-              width: 32, height: 32, borderRadius: 10, flexShrink: 0,
-              background: '#0F7A3A', color: '#fff',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              ...BEBAS, fontSize: 16, letterSpacing: 1,
-            }}>F</div>
+        <div className="bg-forja-primaryDim rounded-[20px] p-4">
+          <div className="flex gap-3 items-start">
+            <div className="w-8 h-8 rounded-[10px] flex-shrink-0 bg-forja-primary flex items-center justify-center font-display text-white text-base" style={{ letterSpacing: 1 }}>F</div>
             <div>
-              <div style={{ ...EYEBROW_PRIMARY, marginBottom: 4 }}>Nota de tu coach</div>
-              <div style={{ fontSize: 13, color: '#0E1015', lineHeight: 1.5 }}>{coachNote}</div>
+              <p className="text-forja-primary uppercase text-[10px] font-bold mb-1" style={{ letterSpacing: 1.2 }}>Nota de tu coach</p>
+              <p className="text-forja-text text-[13px] leading-relaxed">{coachNote}</p>
             </div>
           </div>
-        </Card>
+        </div>
       )}
 
     </div>
