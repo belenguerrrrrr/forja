@@ -27,6 +27,16 @@ function ProContent() {
   // Sub-tab del Plan — permite navegar desde Tracker directamente a "workout"
   const [planSubTab, setPlanSubTab] = useState('calendar')
 
+  const fetchLogs = async (uid) => {
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    const since = thirtyDaysAgo.toISOString().split('T')[0]
+    const { data } = await supabase
+      .from('daily_logs').select('*').eq('user_id', uid)
+      .gte('log_date', since).order('log_date', { ascending: true })
+    if (data) setLogs(data)
+  }
+
   useEffect(() => {
     const init = async () => {
       try {
@@ -58,6 +68,11 @@ function ProContent() {
     }
     init()
   }, [])
+
+  // Refrescar logs al volver al dashboard para que el peso guardado aparezca
+  useEffect(() => {
+    if (activeTab === 'dashboard' && user) fetchLogs(user.id)
+  }, [activeTab])
 
   // Tabs principales del bottom bar (4 del diseño) + extra tabs accesibles desde arriba
   const BOTTOM_TABS = [
