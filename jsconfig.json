@@ -4,5 +4,7 @@
     "paths": {
       "@/*": ["./*"]
     }
-  }
+  },
+  "include": ["**/*.js", "**/*.jsx", "**/*.mjs", "**/*.cjs"],
+  "exclude": ["node_modules", ".next"]
 }

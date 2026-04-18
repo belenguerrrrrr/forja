@@ -1,140 +1,17 @@
 'use client'
 
-import { useState, useEffect, useMemo, Suspense } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { DAYS_ES, GOALS_ES } from '@/lib/utils'
 import { LogoNav, LogoIcon } from '@/components/shared/Logo'
 import BottomNav from '@/components/shared/BottomNav'
 
+import HoyTab      from '@/components/pro/HoyTab'
 import TrackerTab  from '@/components/pro/TrackerTab'
 import PlanTab     from '@/components/pro/PlanTab'
 import CalendarTab from '@/components/pro/CalendarTab'
 import CoachTab    from '@/components/pro/CoachTab'
 import LabTab      from '@/components/pro/LabTab'
-
-// ── DashboardTab (inline — pequeño y sin dependencias extra) ──────────────────
-function DashboardTab({ plan, userData, logs, setActiveTab }) {
-  const weightData = useMemo(() =>
-    (logs || []).filter(l => l.weight_morning != null).map(l => ({
-      date: l.log_date, weight: parseFloat(l.weight_morning),
-    })), [logs])
-
-  const weightToday   = weightData[weightData.length - 1]?.weight ?? null
-  const weightInitial = userData?.current_weight ? parseFloat(userData.current_weight) : null
-  const weightTarget  = userData?.target_weight  ? parseFloat(userData.target_weight)  : null
-  const weightChange  = weightToday != null && weightInitial != null
-    ? (weightToday - weightInitial).toFixed(1) : null
-
-  const streak = useMemo(() => {
-    if (!logs?.length) return 0
-    const sorted = [...logs].sort((a, b) => new Date(b.log_date) - new Date(a.log_date))
-    let count = 0
-    for (const l of sorted) {
-      if ((l.calories_consumed > 0) || l.weight_morning != null) count++
-      else break
-    }
-    return count
-  }, [logs])
-
-  const adherence7 = useMemo(() => {
-    if (!logs?.length || !plan?.daily_calories) return null
-    const last7 = logs.slice(-7).filter(l => l.calories_consumed > 0)
-    if (!last7.length) return null
-    const ok = last7.filter(l => Math.abs(l.calories_consumed - plan.daily_calories) <= plan.daily_calories * 0.15)
-    return Math.round((ok.length / last7.length) * 100)
-  }, [logs, plan])
-
-  const lastSummary = useMemo(() =>
-    [...(logs || [])].reverse().find(l => l.ai_summary_night)?.ai_summary_night ?? null, [logs])
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="font-display text-4xl text-[#0F172A] tracking-wide" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>
-          BUENOS DÍAS 🔥
-        </h2>
-        <p className="text-[#64748B] text-sm mt-1">
-          {userData ? GOALS_ES[userData.goal] || userData.goal : 'Tu plan está activo'}
-        </p>
-      </div>
-
-      {/* Progreso de peso */}
-      <div className="bg-white border border-[#E2E8F0] rounded-xl p-5">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-sm font-semibold text-[#0F172A]">Progreso de peso</h3>
-          {weightChange !== null && (
-            <span className={`text-sm font-bold ${parseFloat(weightChange) <= 0 ? 'text-[#16A34A]' : 'text-orange-500'}`}>
-              {parseFloat(weightChange) > 0 ? '+' : ''}{weightChange} kg
-            </span>
-          )}
-        </div>
-        <div className="grid grid-cols-3 gap-3 mb-4 text-center">
-          {[
-            { label: 'Hoy', value: weightToday, color: 'text-[#0F172A]', bg: 'bg-[#F8FAFC]' },
-            { label: 'Inicial', value: weightInitial, color: 'text-[#64748B]', bg: 'bg-[#F8FAFC]' },
-            { label: 'Objetivo', value: weightTarget, color: 'text-[#16A34A]', bg: 'bg-[#16A34A]/10' },
-          ].map(({ label, value, color, bg }) => (
-            <div key={label} className={`${bg} rounded-xl p-3`}>
-              <div className="text-xs text-[#94A3B8] mb-1">{label}</div>
-              <div className={`text-xl font-bold ${color}`}>{value ?? '–'}</div>
-              <div className="text-xs text-[#94A3B8]">kg</div>
-            </div>
-          ))}
-        </div>
-        {weightData.length > 1 && (
-          <>
-            <div className="flex items-end gap-0.5 h-16">
-              {weightData.slice(-30).map((w, i) => {
-                const vals  = weightData.slice(-30).map(x => x.weight)
-                const min   = Math.min(...vals); const max = Math.max(...vals)
-                const range = max - min || 1
-                const pct   = ((w.weight - min) / range) * 100
-                return (
-                  <div key={i} className="flex-1 flex flex-col justify-end">
-                    <div className="rounded-sm bg-[#16A34A]/60 min-h-[4px]" style={{ height: `${Math.max(8, pct)}%` }}/>
-                  </div>
-                )
-              })}
-            </div>
-            <div className="flex justify-between text-xs text-[#94A3B8] mt-1">
-              <span>{weightData[Math.max(0, weightData.length - 30)]?.weight} kg</span>
-              <span>{weightData[weightData.length - 1]?.weight} kg</span>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Métricas */}
-      <div className="grid grid-cols-2 gap-3">
-        {[
-          { label: 'Racha actual', value: streak, unit: 'días registrados 🔥' },
-          { label: 'Adherencia 7 días', value: adherence7 !== null ? `${adherence7}%` : '–', unit: 'días en objetivo' },
-          { label: 'Puntuación plan', value: plan?.health_score ?? '–', unit: '/ 100' },
-          { label: 'Kcal objetivo', value: plan?.daily_calories ?? '–', unit: 'kcal/día' },
-        ].map(({ label, value, unit }) => (
-          <div key={label} className="bg-white border border-[#E2E8F0] rounded-xl p-4">
-            <div className="text-xs text-[#94A3B8] mb-1">{label}</div>
-            <div className="text-2xl font-bold text-[#16A34A]">{value}</div>
-            <div className="text-xs text-[#94A3B8]">{unit}</div>
-          </div>
-        ))}
-      </div>
-
-      {lastSummary && (
-        <div className="bg-[#0F172A] text-white rounded-xl p-5">
-          <div className="text-xs text-white/50 mb-2 uppercase tracking-wider">Último resumen nocturno</div>
-          <p className="text-sm text-white/80 leading-relaxed">{lastSummary}</p>
-        </div>
-      )}
-
-      <button onClick={() => setActiveTab('tracker')}
-        className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-semibold py-4 rounded-xl text-sm transition-colors flex items-center justify-center gap-2">
-        🍽️ Abrir Tracker de hoy
-      </button>
-    </div>
-  )
-}
 
 // ── ProContent ────────────────────────────────────────────────────────────────
 function ProContent() {
@@ -248,7 +125,7 @@ function ProContent() {
       {/* Contenido */}
       <div className="max-w-2xl mx-auto px-4 py-6 pb-24">
         {activeTab === 'dashboard' && (
-          <DashboardTab plan={plan} userData={userData} logs={logs} setActiveTab={setActiveTab}/>
+          <HoyTab user={user} plan={plan} userData={userData} logs={logs} setActiveTab={setActiveTab}/>
         )}
         {activeTab === 'tracker' && (
           <TrackerTab

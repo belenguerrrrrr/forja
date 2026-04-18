@@ -9,16 +9,23 @@ module.exports = {
     extend: {
       colors: {
         forja: {
-          bg: '#F8FAFC',
-          surface: '#FFFFFF',
-          border: '#E2E8F0',
-          primary: '#16A34A',
-          'primary-hover': '#15803D',
-          secondary: '#22C55E',
-          green: '#16A34A',
-          text: '#0F172A',
-          muted: '#64748B',
-          accent: '#F97316',
+          bg:           '#F5F5F2',
+          surface:      '#FFFFFF',
+          text:         '#0E1015',
+          muted:        '#6B6B6F',
+          faint:        '#9B9BA0',
+          hairline:     'rgba(14, 16, 21, 0.08)',
+          softFill:     '#EFEFEA',
+          primary:      '#0F7A3A',
+          'primary-hover': '#0a5c2b',
+          primaryDim:   '#DDECE2',
+          accent:       '#B8621B',
+          chartGrid:    'rgba(14, 16, 21, 0.06)',
+          tabBarBg:     'rgba(245, 245, 242, 0.92)',
+          // aliases kept for backward compat
+          border:       'rgba(14, 16, 21, 0.08)',
+          secondary:    '#0F7A3A',
+          green:        '#0F7A3A',
         },
       },
       fontFamily: {
